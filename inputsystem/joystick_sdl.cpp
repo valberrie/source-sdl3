@@ -9,7 +9,7 @@
 #include "tier1/convar.h"
 #include "tier0/icommandline.h"
 
-#include <SDL3/SDL.h>
+#include "SDL3/SDL.h"
 
 
 // NOTE: This has to be the last file included!

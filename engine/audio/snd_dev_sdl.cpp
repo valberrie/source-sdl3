@@ -5,8 +5,6 @@
 //===========================================================================//
 
 #include "audio_pch.h"
-#include <SDL3/SDL_audio.h>
-
 #if !DEDICATED
 
 #include "tier0/dynfunction.h"

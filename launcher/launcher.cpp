@@ -6,7 +6,7 @@
 //
 //===========================================================================//
 
-#include <SDL3/SDL_version.h>
+#include "SDL3/SDL_version.h"
 #if defined( _WIN32 ) && !defined( _X360 )
 #include <windows.h>
 #include "shlwapi.h" // registry stuff

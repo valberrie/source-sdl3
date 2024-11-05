@@ -5,8 +5,6 @@
 //=============================================================================//
 
 #include "platform.h"
-#include <SDL3/SDL_events.h>
-#include <SDL3/SDL_mouse.h>
 #ifdef USE_SDL
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_opengl.h"

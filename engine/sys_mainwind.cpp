@@ -3,8 +3,6 @@
 // Purpose:
 //
 //===========================================================================//
-#include <SDL3/SDL_properties.h>
-#include <SDL3/SDL_video.h>
 #if defined( USE_SDL )
 #undef PROTECTED_THINGS_ENABLE
 #include "SDL3/SDL.h"
