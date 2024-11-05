@@ -1,6 +1,6 @@
 //========= Copyright Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 //=============================================================================//
 
@@ -27,7 +27,7 @@
 
 // We lazily load the SDL shared object, and only reference functions if it's
 // available, so this can be included on the dedicated server too.
-#include "SDL.h"
+#include "SDL3/SDL.h"
 
 typedef int ( SDLCALL FUNC_SDL_ShowMessageBox )( const SDL_MessageBoxData *messageboxdata, int *buttonid );
 #endif
@@ -45,16 +45,16 @@ class CAssertDisable
 {
 public:
 	tchar m_Filename[512];
-	
+
 	// If these are not -1, then this CAssertDisable only disables asserts on lines between
 	// these values (inclusive).
-	int m_LineMin;		
+	int m_LineMin;
 	int m_LineMax;
-	
-	// Decremented each time we hit this assert and ignore it, until it's 0. 
+
+	// Decremented each time we hit this assert and ignore it, until it's 0.
 	// Then the CAssertDisable is removed.
 	// If this is -1, then we always ignore this assert.
-	int m_nIgnoreTimes;	
+	int m_nIgnoreTimes;
 
 	CAssertDisable *m_pNext;
 };
@@ -130,7 +130,7 @@ static bool AreAssertsEnabledInFileLine( const tchar *pFilename, int iLine )
 			bool bAssertsEnabled = true;
 			if ( pCur->m_LineMin == -1 && pCur->m_LineMax == -1 )
 				bAssertsEnabled = false;
-			
+
 			// Are asserts disabled on the specified line?
 			if ( iLine >= pCur->m_LineMin && iLine <= pCur->m_LineMax )
 				bAssertsEnabled = false;
@@ -149,7 +149,7 @@ static bool AreAssertsEnabledInFileLine( const tchar *pFilename, int iLine )
 						continue;
 					}
 				}
-				
+
 				return false;
 			}
 		}
@@ -169,10 +169,10 @@ CAssertDisable* CreateNewAssertDisable( const tchar *pFilename )
 
 	pDisable->m_LineMin = pDisable->m_LineMax = -1;
 	pDisable->m_nIgnoreTimes = -1;
-	
+
 	_tcsncpy( pDisable->m_Filename, g_Info.m_pFilename, sizeof( pDisable->m_Filename ) - 1 );
 	pDisable->m_Filename[ sizeof( pDisable->m_Filename ) - 1 ] = 0;
-	
+
 	return pDisable;
 }
 
@@ -214,14 +214,14 @@ INT_PTR CALLBACK AssertDialogProc(
 			SetDlgItemInt( hDlg, IDC_LINE_CONTROL, g_Info.m_iLine, false );
 			SetDlgItemInt( hDlg, IDC_IGNORE_NUMLINES, g_iLastLineRange, false );
 			SetDlgItemInt( hDlg, IDC_IGNORE_NUMTIMES, g_nLastIgnoreNumTimes, false );
-		
+
 			// Center the dialog.
 			RECT rcDlg, rcDesktop;
 			GetWindowRect( hDlg, &rcDlg );
 			GetWindowRect( GetDesktopWindow(), &rcDesktop );
-			SetWindowPos( 
-				hDlg, 
-				HWND_TOP, 
+			SetWindowPos(
+				hDlg,
+				HWND_TOP,
 				((rcDesktop.right-rcDesktop.left) - (rcDlg.right-rcDlg.left)) / 2,
 				((rcDesktop.bottom-rcDesktop.top) - (rcDlg.bottom-rcDlg.top)) / 2,
 				0,
@@ -264,7 +264,7 @@ INT_PTR CALLBACK AssertDialogProc(
 					EndDialog( hDlg, 0 );
 					return true;
 				}
-				
+
 				case IDC_IGNORE_NEARBY:
 				{
 					BOOL bTranslated = false;
@@ -302,7 +302,7 @@ INT_PTR CALLBACK AssertDialogProc(
 					return true;
 				}
 			}
-					
+
 		}
 		return true;
 	}
@@ -613,4 +613,3 @@ DBG_INTERFACE bool DoNewAssertDialog( const tchar *pFilename, int line, const tc
 
 	return g_bBreak;
 }
-

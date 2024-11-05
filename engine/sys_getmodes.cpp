@@ -1,13 +1,12 @@
 //========= Copyright Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 //===========================================================================//
 
 #if defined( USE_SDL )
 #undef PROTECTED_THINGS_ENABLE
-#include "SDL.h"
-#include "SDL_syswm.h"
+#include "SDL3/SDL.h"
 #endif
 
 #if defined( _WIN32 ) && !defined( _X360 )
@@ -141,7 +140,7 @@ protected:
 	void				ApplySteamScreenshotTags( ScreenshotHandle hScreenshot );
 #endif
 
-    // Finds the video mode in the list of video modes 
+    // Finds the video mode in the list of video modes
     int                 FindVideoMode( int nDesiredWidth, int nDesiredHeight, bool bWindowed );
 
     // Purpose: Returns the optimal refresh rate for the specified mode
@@ -239,7 +238,7 @@ inline vmode_t& CVideoMode_Common::RequestedWindowVideoMode()
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 CVideoMode_Common::CVideoMode_Common( void )
 {
@@ -255,7 +254,7 @@ CVideoMode_Common::CVideoMode_Common( void )
     RequestedWindowVideoMode().height = -1;
     RequestedWindowVideoMode().bpp    = 32;
     RequestedWindowVideoMode().refreshRate = 0;
-    
+
     m_bClientViewRectDirty = false;
     m_pBackgroundTexture   = NULL;
     m_pLoadingTexture      = NULL;
@@ -266,14 +265,14 @@ CVideoMode_Common::CVideoMode_Common( void )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 CVideoMode_Common::~CVideoMode_Common( void )
 {
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
 bool CVideoMode_Common::GetInitialized( void ) const
@@ -282,8 +281,8 @@ bool CVideoMode_Common::GetInitialized( void ) const
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : init - 
+// Purpose:
+// Input  : init -
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::SetInitialized( bool init )
 {
@@ -291,7 +290,7 @@ void CVideoMode_Common::SetInitialized( bool init )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
 bool CVideoMode_Common::IsWindowedMode( void ) const
@@ -359,7 +358,7 @@ vmode_t *CVideoMode_Common::GetMode( int num )
 
 
 //-----------------------------------------------------------------------------
-// Returns the number of fullscreen video modes 
+// Returns the number of fullscreen video modes
 //-----------------------------------------------------------------------------
 int CVideoMode_Common::GetModeCount( void )
 {
@@ -369,8 +368,8 @@ int CVideoMode_Common::GetModeCount( void )
 
 //-----------------------------------------------------------------------------
 // Purpose: Compares video modes so we can sort the list
-// Input  : *arg1 - 
-//          *arg2 - 
+// Input  : *arg1 -
+//          *arg2 -
 // Output : static int
 //-----------------------------------------------------------------------------
 static int __cdecl VideoModeCompare( const void *arg1, const void *arg2 )
@@ -405,16 +404,16 @@ static int __cdecl VideoModeCompare( const void *arg1, const void *arg2 )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 bool CVideoMode_Common::Init( )
-{   
+{
     return true;
 }
 
 
 //-----------------------------------------------------------------------------
-// Finds the video mode in the list of video modes 
+// Finds the video mode in the list of video modes
 //-----------------------------------------------------------------------------
 int CVideoMode_Common::FindVideoMode( int nDesiredWidth, int nDesiredHeight, bool bWindowed )
 {
@@ -484,7 +483,7 @@ int CVideoMode_Common::FindVideoMode( int nDesiredWidth, int nDesiredHeight, boo
         // Match width first
         if ( m_rgModeList[i].width != nDesiredWidth )
             continue;
-        
+
         iOK = i;
 
         if ( m_rgModeList[i].height != nDesiredHeight )
@@ -554,16 +553,18 @@ void CVideoMode_Common::ResetCurrentModeForNewResolution( int nWidth, int nHeigh
 			m_nVROverrideX = vrBounds.nX;
 			m_nVROverrideY = vrBounds.nY;
 #elif defined( USE_SDL )
-			for ( int i = 0; i < SDL_GetNumVideoDisplays(); i++ )
+            int numdisplays = 0;
+            SDL_DisplayID* displays = SDL_GetDisplays(&numdisplays);
+			for ( int i = 0; i < numdisplays; i++ )
 			{
 				SDL_Rect sdlRect;
-				SDL_GetDisplayBounds( i, &sdlRect );
+				SDL_GetDisplayBounds( displays[i], &sdlRect );
 
-				if( sdlRect.x == vrBounds.nX && sdlRect.y == vrBounds.nY 
+				if( sdlRect.x == vrBounds.nX && sdlRect.y == vrBounds.nY
 					&& sdlRect.w == vrBounds.nWidth && sdlRect.h == vrBounds.nHeight )
 				{
-					static ConVarRef sdl_displayindex( "sdl_displayindex" );
-					sdl_displayindex.SetValue( i );
+					static ConVarRef sdl_displayID( "sdl_displayid" );
+					sdl_displayID.SetValue( (int)displays[i] );
 					break;
 				}
 			}
@@ -619,7 +620,7 @@ bool CVideoMode_Common::CreateGameWindow( int nWidth, int nHeight, bool bWindowe
         RequestedWindowVideoMode().width = nWidth;
         RequestedWindowVideoMode().height = nHeight;
     }
-    
+
     if ( !InEditMode() )
     {
         // Fill in vid structure for the mode.
@@ -627,7 +628,7 @@ bool CVideoMode_Common::CreateGameWindow( int nWidth, int nHeight, bool bWindowe
         ResetCurrentModeForNewResolution( nWidth, nHeight, bWindowed );
 
 		COM_TimestampedLog( "CreateGameWindow - Start" );
-        // When running in stand-alone mode, create your own window 
+        // When running in stand-alone mode, create your own window
         if ( !game->CreateGameWindow() )
             return false;
 		COM_TimestampedLog( "CreateGameWindow - Finish" );
@@ -775,7 +776,7 @@ void CVideoMode_Common::ApplySteamScreenshotTags( ScreenshotHandle hScreenshot )
 		{
 			Steam3Client().SteamScreenshots()->SetLocation( hScreenshot, pchLocation );
 		}
-	}	
+	}
 }
 #endif
 
@@ -794,12 +795,12 @@ void CVideoMode_Common::SetupStartupGraphic()
     if ( aspectRatio >= 1.6f )
     {
         // use the widescreen version
-        Q_snprintf( material, sizeof(material), 
+        Q_snprintf( material, sizeof(material),
             "materials/console/%s_widescreen.vtf", szBackgroundName );
     }
     else
     {
-        Q_snprintf( material, sizeof(material), 
+        Q_snprintf( material, sizeof(material),
             "materials/console/%s.vtf", szBackgroundName );
     }
 
@@ -876,7 +877,7 @@ void CVideoMode_Common::DrawStartupGraphic()
 		strcpy( pStartupGraphicName, "materials/console/background01.vtf");
 		//strcpy( pStartupGraphicName, "materials/console/testramp.vtf");
 	}
-	
+
     // Allocate a white material
     KeyValues *pVMTKeyValues = new KeyValues( "UnlitGeneric" );
     pVMTKeyValues->SetString( "$basetexture", pStartupGraphicName + 10 );
@@ -924,10 +925,10 @@ void CVideoMode_Common::DrawStartupGraphic()
 				{
 					slide = 200-slide;		// aka 100-(slide-100).
 				}
-				
+
 				// stop sliding about
 				slide = 0;
-				
+
 				DrawScreenSpaceRectangle( pMaterial, 0, 0+slide, w, h-50, 0, 0, tw-1, th-1, tw, th, NULL,1,1,depth );
                 if ( !IsSteamDeck() )
                     DrawScreenSpaceRectangle( pLoadingMaterial, w-lw, h-lh+slide/2, lw, lh, 0, 0, lw-1, lh-1, lw, lh, NULL,1,1,depth-0.1 );
@@ -942,11 +943,11 @@ void CVideoMode_Common::DrawStartupGraphic()
 				int grid_size = 8;
 				float depthacc = 0.0;
 				float depthinc = 1.0 / (float)((grid_size * grid_size)+1);
-				
+
 				for( int x = 0; x<grid_size; x++)
 				{
 					float cornerx = ((float)x) * 20.0f;
-					
+
 					for( int y=0; y<grid_size; y++)
 					{
 						float cornery = ((float)y) * 20.0f;
@@ -955,13 +956,13 @@ void CVideoMode_Common::DrawStartupGraphic()
 						{
 							DrawScreenSpaceRectangle( pMaterial, 10.0f+cornerx,10.0f+ cornery, 15, 15, 0, 0, tw-1, th-1, tw, th, NULL,1,1, depthacc );
 						}
-						
+
 						depthacc += depthinc;
 					}
 				}
 			}
 
-			g_pMaterialSystem->SwapBuffers();			
+			g_pMaterialSystem->SwapBuffers();
 		}
 	}
 	else
@@ -969,7 +970,7 @@ void CVideoMode_Common::DrawStartupGraphic()
 		pRenderContext->Viewport( 0, 0, w, h );
 		pRenderContext->DepthRange( 0, 1 );
 		pRenderContext->SetToneMappingScaleLinear( Vector(1,1,1) );
-		
+
 		float depth = 0.5f;
 
 		// Make sure we clear both front & back buffer.
@@ -1042,9 +1043,9 @@ void CVideoMode_Common::InvalidateWindow()
 #if defined( USE_SDL )
 		SDL_Event fake;
 		memset(&fake, '\0', sizeof (SDL_Event));
-		fake.type = SDL_WINDOWEVENT;
+		// fake.type = SDL_WINDOWEVENT;
 		fake.window.windowID = SDL_GetWindowID( (SDL_Window *) g_pLauncherMgr->GetWindowRef() );
-		fake.window.event = SDL_WINDOWEVENT_EXPOSED;
+		fake.type = SDL_EVENT_WINDOW_EXPOSED;
 		SDL_PushEvent(&fake);
 #else
 		InvalidateRect( (HWND)game->GetMainWindow(), NULL, FALSE );
@@ -1063,7 +1064,7 @@ void CVideoMode_Common::DrawNullBackground( void *hHDC, int w, int h )
     // Show a message if running without renderer..
     if ( CommandLine()->FindParm( "-noshaderapi" ) )
     {
-        HFONT fnt = CreateFontA( -18, 
+        HFONT fnt = CreateFontA( -18,
          0,
          0,
          0,
@@ -1085,7 +1086,7 @@ void CVideoMode_Common::DrawNullBackground( void *hHDC, int w, int h )
         HBRUSH br = CreateSolidBrush( RGB( 0, 0, 0  ) );
         HBRUSH oldBr = (HBRUSH)SelectObject( hdc, br );
         Rectangle( hdc, 0, 0, w, h );
-        
+
         RECT rc;
         rc.left = 0;
         rc.top = 0;
@@ -1226,7 +1227,7 @@ void CVideoMode_Common::BlitGraphicToHDC(HDC hdc, byte *rgba, int imageWidth, in
         NULL,                       // handle to file mapping object
         0                           // offset to bitmap bit values
     );
-    
+
     // Select it into the source DC
     HBITMAP oldBitmap = (HBITMAP)SelectObject( tempDC, bm );
 
@@ -1263,7 +1264,7 @@ void CVideoMode_Common::BlitGraphicToHDC(HDC hdc, byte *rgba, int imageWidth, in
             int iBilinearU = fixedBilinearU >> BILINEAR_FIX_SHIFT;
             int fixedFractionU = fixedBilinearU & (BILINEAR_FIX_MUL-1);
             fixedBilinearU += bilinearUInc;
-        
+
             Assert( iBilinearU >= 0 && iBilinearU+1 < imageWidth );
             Assert( iBilinearV >= 0 && iBilinearV+1 < imageHeight );
 
@@ -1285,7 +1286,7 @@ void CVideoMode_Common::BlitGraphicToHDC(HDC hdc, byte *rgba, int imageWidth, in
             dest[2] = finalColor[0];
         }
     }
-    
+
     // Now do the Blt
     BitBlt( hdc, 0, 0, dibwide, tall, tempDC, 0, 0, SRCCOPY );
 
@@ -1357,8 +1358,8 @@ int CVideoMode_Common::GetRefreshRateForMode( const vmode_t *pMode )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : *mode - 
+// Purpose:
+// Input  : *mode -
 // Output : Returns true on success, false on failure.
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::AdjustWindow( int nWidth, int nHeight, int nBPP, bool bWindowed )
@@ -1459,7 +1460,7 @@ void CVideoMode_Common::AdjustWindow( int nWidth, int nHeight, int nBPP, bool bW
 			SDL_SetWindowBordered( win, SDL_FALSE );
 		else
 			SDL_SetWindowBordered( win, SDL_TRUE );
-			
+
 	}
 #endif
 
@@ -1472,7 +1473,7 @@ void CVideoMode_Common::AdjustWindow( int nWidth, int nHeight, int nBPP, bool bW
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::Shutdown( void )
 {
@@ -1538,10 +1539,10 @@ void CVideoMode_Common::RecomputeClientViewRect()
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
-// Input  : hWndCenter - 
-//          width - 
-//          height - 
+// Purpose:
+// Input  : hWndCenter -
+//          width -
+//          height -
 // Output : static void
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::CenterEngineWindow( void *hWndCenter, int width, int height)
@@ -1550,11 +1551,19 @@ void CVideoMode_Common::CenterEngineWindow( void *hWndCenter, int width, int hei
 
 #if defined(USE_SDL)
 	// Get the displayindex, and center our window on that display.
-	static ConVarRef sdl_displayindex( "sdl_displayindex" );
-	int displayindex = sdl_displayindex.IsValid() ? sdl_displayindex.GetInt() : 0;
+	static ConVarRef sdl_displayID( "sdl_displayid" );
+	int displayID = sdl_displayID.IsValid() ? sdl_displayID.GetInt() : 0;
 
 	SDL_DisplayMode mode;
-	SDL_GetCurrentDisplayMode( displayindex, &mode );
+	if(SDL_GetCurrentDisplayMode(displayID) == NULL)
+	{
+	    Assert(0);
+	}
+	else
+	{
+	    mode = *SDL_GetCurrentDisplayMode( displayID );
+	}
+
 
 	const int wide = mode.w;
 	const int tall = mode.h;
@@ -1569,19 +1578,19 @@ void CVideoMode_Common::CenterEngineWindow( void *hWndCenter, int width, int hei
 	CenterY = CommandLine()->ParmValue( "-y", CenterY );
 
 	// also check for the negated form (since it is hard to say "-x -1000")
-	int negx = CommandLine()->ParmValue( "-negx", 0 ); 
+	int negx = CommandLine()->ParmValue( "-negx", 0 );
 	if (negx > 0)
 	{
 		CenterX = -negx;
 	}
-	int negy = CommandLine()->ParmValue( "-negy", 0 ); 
+	int negy = CommandLine()->ParmValue( "-negy", 0 );
 	if (negy > 0)
 	{
 		CenterY = -negy;
 	}
 
 	SDL_Rect rect = { 0, 0, 0, 0 };
-	SDL_GetDisplayBounds( displayindex, &rect );
+	SDL_GetDisplayBounds( displayID, &rect );
 
 	CenterX += rect.x;
 	CenterY += rect.y;
@@ -1601,7 +1610,7 @@ void CVideoMode_Common::CenterEngineWindow( void *hWndCenter, int width, int hei
         {
             game->GetDesktopInfo( cxScreen, cyScreen, refreshRate );
         }
-        
+
         if ( !cxScreen || !cyScreen )
         {
             cxScreen = GetSystemMetrics(SM_CXSCREEN);
@@ -1714,7 +1723,7 @@ void CVideoMode_Common::BlitHiLoScreenBuffersTo16Bit( void )
         Assert( 0 );
         return;
     }
-    
+
     IMaterial *pHDRCombineMaterial = materials->FindMaterial( "dev/hdrcombineto16bit", TEXTURE_GROUP_OTHER, true );
 //  if( IsErrorMaterial( pHDRCombineMaterial ) )
 //  {
@@ -1837,8 +1846,8 @@ void CVideoMode_Common::TakeSnapshotPFMRect( const char *pFilename, int x, int y
     pRenderContext->SetRenderTarget( pSaveRenderTarget );
 
     // convert from float16 to float32
-    ImageLoader::ConvertImageFormat( ( unsigned char * )pImage, IMAGE_FORMAT_RGBA16161616F, 
-        ( unsigned char * )pImage1, IMAGE_FORMAT_RGB323232F, 
+    ImageLoader::ConvertImageFormat( ( unsigned char * )pImage, IMAGE_FORMAT_RGBA16161616F,
+        ( unsigned char * )pImage1, IMAGE_FORMAT_RGB323232F,
         w, h );
 
     Assert( w == h ); // garymcthack - this only works for square images
@@ -1908,7 +1917,7 @@ void CVideoMode_Common::TakeSnapshotTGARect( const char *pFilename, int x, int y
     {
         Sys_Error( "Can't resample\n" );
     }
-    
+
     CUtlBuffer outBuf;
     if ( TGAWriter::WriteToBuffer( pImage1, outBuf, resampleWidth, resampleHeight, IMAGE_FORMAT_RGBA8888, IMAGE_FORMAT_RGBA8888 ) )
     {
@@ -1930,11 +1939,11 @@ void CVideoMode_Common::TakeSnapshotTGARect( const char *pFilename, int x, int y
 
 //-----------------------------------------------------------------------------
 // Purpose: Writes the data in *data to the sequentially number .bmp file filename
-// Input  : *filename - 
-//          width - 
-//          height - 
-//          depth - 
-//          *data - 
+// Input  : *filename -
+//          width -
+//          height -
+//          depth -
+//          *data -
 // Output : static void
 //-----------------------------------------------------------------------------
 static void VID_ProcessMovieFrame( const MovieInfo_t& info, bool jpeg, const char *filename, int width, int height, byte *data )
@@ -1964,7 +1973,7 @@ static void VID_ProcessMovieFrame( const MovieInfo_t& info, bool jpeg, const cha
 
 //-----------------------------------------------------------------------------
 // Purpose: Store current frame to numbered .bmp file
-// Input  : *pFilename - 
+// Input  : *pFilename -
 //-----------------------------------------------------------------------------
 extern IVideoRecorder *g_pVideoRecorder;
 
@@ -1996,13 +2005,13 @@ void CVideoMode_Common::WriteMovieFrame( const MovieInfo_t& info )
     // Store frame to disk
     if ( info.DoTga() )
     {
-        VID_ProcessMovieFrame( info, false, va( "%s%04d.tga", pMovieName, nMovieFrame ), 
+        VID_ProcessMovieFrame( info, false, va( "%s%04d.tga", pMovieName, nMovieFrame ),
             GetModeStereoWidth(), GetModeStereoHeight(), (unsigned char*)hp );
     }
 
     if ( info.DoJpg() )
     {
-        VID_ProcessMovieFrame( info, true, va( "%s%04d.jpg", pMovieName, nMovieFrame ), 
+        VID_ProcessMovieFrame( info, true, va( "%s%04d.jpg", pMovieName, nMovieFrame ),
             GetModeStereoWidth(), GetModeStereoHeight(), (unsigned char*)hp );
     }
 
@@ -2021,13 +2030,13 @@ void CVideoMode_Common::WriteMovieFrame( const MovieInfo_t& info )
 struct JPEGDestinationManager_t
 {
     struct jpeg_destination_mgr pub; // public fields
-    
+
     CUtlBuffer  *pBuffer;       // target/final buffer
     byte        *buffer;        // start of temp buffer
 };
 
 // choose an efficiently bufferaable size
-#define OUTPUT_BUF_SIZE  4096   
+#define OUTPUT_BUF_SIZE  4096
 
 //-----------------------------------------------------------------------------
 // Purpose:  Initialize destination --- called by jpeg_start_compress
@@ -2036,32 +2045,32 @@ struct JPEGDestinationManager_t
 METHODDEF(void) init_destination (j_compress_ptr cinfo)
 {
     JPEGDestinationManager_t *dest = ( JPEGDestinationManager_t *) cinfo->dest;
-    
+
     // Allocate the output buffer --- it will be released when done with image
     dest->buffer = (byte *)
         (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
         OUTPUT_BUF_SIZE * sizeof(byte));
-    
+
     dest->pub.next_output_byte = dest->buffer;
     dest->pub.free_in_buffer = OUTPUT_BUF_SIZE;
 }
 
 //-----------------------------------------------------------------------------
 // Purpose: Empty the output buffer --- called whenever buffer fills up.
-// Input  : boolean - 
+// Input  : boolean -
 //-----------------------------------------------------------------------------
 METHODDEF(boolean) empty_output_buffer (j_compress_ptr cinfo)
 {
     JPEGDestinationManager_t *dest = ( JPEGDestinationManager_t * ) cinfo->dest;
-    
+
     CUtlBuffer *buf = dest->pBuffer;
 
     // Add some data
     buf->Put( dest->buffer, OUTPUT_BUF_SIZE );
-    
+
     dest->pub.next_output_byte = dest->buffer;
     dest->pub.free_in_buffer = OUTPUT_BUF_SIZE;
-    
+
     return TRUE;
 }
 
@@ -2077,11 +2086,11 @@ METHODDEF(void) term_destination (j_compress_ptr cinfo)
 {
     JPEGDestinationManager_t *dest = (JPEGDestinationManager_t *) cinfo->dest;
     size_t datacount = OUTPUT_BUF_SIZE - dest->pub.free_in_buffer;
-    
+
     CUtlBuffer *buf = dest->pBuffer;
 
     /* Write any data remaining in the buffer */
-    if (datacount > 0) 
+    if (datacount > 0)
     {
         buf->Put( dest->buffer, datacount );
     }
@@ -2093,7 +2102,7 @@ METHODDEF(void) term_destination (j_compress_ptr cinfo)
 GLOBAL(void) jpeg_UtlBuffer_dest (j_compress_ptr cinfo, CUtlBuffer *pBuffer )
 {
     JPEGDestinationManager_t *dest;
-    
+
     /* The destination object is made permanent so that multiple JPEG images
     * can be written to the same file without re-executing jpeg_stdio_dest.
     * This makes it dangerous to use this manager and a different destination
@@ -2105,7 +2114,7 @@ GLOBAL(void) jpeg_UtlBuffer_dest (j_compress_ptr cinfo, CUtlBuffer *pBuffer )
             (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT,
             sizeof(JPEGDestinationManager_t));
     }
-    
+
     dest = ( JPEGDestinationManager_t * ) cinfo->dest;
 
     dest->pub.init_destination      = init_destination;
@@ -2169,9 +2178,9 @@ bool CVideoMode_Common::TakeSnapshotJPEGToBuffer( CUtlBuffer& buf, int quality )
 
     // Start compressor
     jpeg_start_compress(&cinfo, TRUE);
-    
+
     // Write scanlines
-    while ( cinfo.next_scanline < cinfo.image_height ) 
+    while ( cinfo.next_scanline < cinfo.image_height )
     {
         row_pointer[ 0 ] = &pImage[ cinfo.next_scanline * row_stride ];
         jpeg_write_scanlines( &cinfo, row_pointer, 1 );
@@ -2182,7 +2191,7 @@ bool CVideoMode_Common::TakeSnapshotJPEGToBuffer( CUtlBuffer& buf, int quality )
 
     // Cleanup
     jpeg_destroy_compress(&cinfo);
-    
+
     delete[] pImage;
 
 #else
@@ -2194,7 +2203,7 @@ bool CVideoMode_Common::TakeSnapshotJPEGToBuffer( CUtlBuffer& buf, int quality )
 
 //-----------------------------------------------------------------------------
 // Purpose: Write vid.buffer out as a .jpg file
-// Input  : *pFilename - 
+// Input  : *pFilename -
 //-----------------------------------------------------------------------------
 void CVideoMode_Common::TakeSnapshotJPEG( const char *pFilename, int quality )
 {
@@ -2239,13 +2248,13 @@ void CVideoMode_Common::TakeSnapshotJPEG( const char *pFilename, int quality )
 }
 
 //-----------------------------------------------------------------------------
-// The version of the VideoMode class for the material system 
+// The version of the VideoMode class for the material system
 //-----------------------------------------------------------------------------
 class CVideoMode_MaterialSystem: public CVideoMode_Common
 {
 public:
     typedef CVideoMode_Common BaseClass;
-    
+
     CVideoMode_MaterialSystem( );
 
     virtual bool        Init( );
@@ -2416,7 +2425,7 @@ bool CVideoMode_MaterialSystem::SetMode( int nWidth, int nHeight, bool bWindowed
 #else
     config.m_VideoMode.m_RefreshRate = GetRefreshRateForMode( pMode );
 #endif
-    
+
     config.SetFlag( MATSYS_VIDCFG_FLAGS_WINDOWED, bWindowed );
 
 #if defined( _X360 )
@@ -2442,7 +2451,7 @@ bool CVideoMode_MaterialSystem::SetMode( int nWidth, int nHeight, bool bWindowed
     if ( !m_bSetModeOnce )
     {
 		//Debugger();
-		
+
         if ( !materials->SetMode( (void*)game->GetMainDeviceWindow(), config ) )
             return false;
 
@@ -2452,7 +2461,7 @@ bool CVideoMode_MaterialSystem::SetMode( int nWidth, int nHeight, bool bWindowed
         return true;
     }
 
-    // update the config 
+    // update the config
     OverrideMaterialSystemConfig( config );
     return true;
 }
@@ -2485,7 +2494,7 @@ void CVideoMode_MaterialSystem::AdjustForModeChange( void )
 
     // fixup vgui
     vgui::surface()->OnScreenSizeChanged( nOldUIWidth, nOldUIHeight );
-    
+
     // Re-init the HUD
     ClientDLL_HudVidInit();
 }
@@ -2534,7 +2543,7 @@ void CVideoMode_MaterialSystem::ReleaseVideo( void )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 void CVideoMode_MaterialSystem::RestoreVideo( void )
 {
@@ -2554,7 +2563,7 @@ void CVideoMode_MaterialSystem::RestoreVideo( void )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 void CVideoMode_MaterialSystem::ReleaseFullScreen( void )
 {

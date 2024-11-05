@@ -1,11 +1,11 @@
 //========= Copyright 1996-2009, Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 // $NoKeywords: $
 //
 //=============================================================================//
-// This module implements the voice record and compression functions 
+// This module implements the voice record and compression functions
 
 //#include "audio_pch.h"
 //#include "voice.h"
@@ -15,7 +15,7 @@
 #include "tier0/threadtools.h"
 
 #include <assert.h>
-#include <SDL_audio.h>
+#include <SDL3/SDL_audio.h>
 
 #define RECORDING_BUFFER_SECONDS 3
 #define SAMPLE_COUNT 2048
@@ -106,10 +106,17 @@ private:
 	AudioBuf m_AudioBuffer;
 };
 
-void audioRecordingCallback( void *userdata, uint8 *stream, int len )
+void audioRecordingCallback( void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount )
 {
-	VoiceRecord_SDL *voice = (VoiceRecord_SDL*)userdata;
-	voice->RenderBuffer( (char*)stream, len );
+    VoiceRecord_SDL *voice = (VoiceRecord_SDL*)userdata;
+    if (additional_amount > 0) {
+        Uint8 *data = SDL_stack_alloc(Uint8, additional_amount);
+        if (data) {
+            voice->RenderBuffer( (char*)data, additional_amount );
+            SDL_GetAudioStreamData(stream, data, additional_amount);
+            SDL_stack_free(data);
+        }
+    }
 }
 
 VoiceRecord_SDL::VoiceRecord_SDL() :
@@ -143,7 +150,7 @@ bool VoiceRecord_SDL::RecordStart()
 	if ( !m_Device )
 		return false;
 
-	SDL_PauseAudioDevice( m_Device, SDL_FALSE );
+	SDL_ResumeAudioDevice( m_Device);
 
 	return true;
 }
@@ -153,7 +160,7 @@ void VoiceRecord_SDL::RecordStop()
 {
 	// Stop capturing.
 	if ( m_Device )
-		SDL_PauseAudioDevice( m_Device, SDL_TRUE );
+		SDL_PauseAudioDevice( m_Device );
 
 	// Release the capture buffer interface and any other resources that are no
 	// longer needed
@@ -162,6 +169,7 @@ void VoiceRecord_SDL::RecordStop()
 
 bool VoiceRecord_SDL::InitalizeInterfaces()
 {
+    /*
 	//Default audio spec
 	SDL_AudioSpec desiredRecordingSpec;
 	SDL_zero(desiredRecordingSpec);
@@ -170,10 +178,15 @@ bool VoiceRecord_SDL::InitalizeInterfaces()
 	desiredRecordingSpec.channels = 1;
 	desiredRecordingSpec.samples = SAMPLE_COUNT;
 	desiredRecordingSpec.callback = audioRecordingCallback;
-	desiredRecordingSpec.userdata = (void*)this;
 
 	//Open recording device
 	m_Device = SDL_OpenAudioDevice( NULL, SDL_TRUE, &desiredRecordingSpec, &m_ReceivedRecordingSpec, 0 );
+	*/
+	void* userdata = (void*)this;
+
+	const SDL_AudioSpec spec = { SDL_AUDIO_S16, 1, SAMPLE_COUNT };
+    SDL_AudioStream *stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, audioRecordingCallback, userdata);
+    m_Device = SDL_GetAudioStreamDevice(stream);
 
 	if( m_Device != 0 )
 	{

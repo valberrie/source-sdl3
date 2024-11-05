@@ -1,10 +1,11 @@
 //========= Copyright Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 //===========================================================================//
 
 #include "audio_pch.h"
+#include <SDL3/SDL_audio.h>
 
 #if !DEDICATED
 
@@ -19,7 +20,7 @@
 #define _STDINT_H_ 1
 #endif
 
-#include "SDL.h"
+#include "SDL3/SDL.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -39,7 +40,6 @@ extern void S_SpatializeChannel( /*int nSlot,*/ int volume[6], int master_vol, c
 #else
 static inline void debugsdl(const char *fmt, ...) {}
 #endif
-
 
 //-----------------------------------------------------------------------------
 //
@@ -83,28 +83,29 @@ public:
 	int			DeviceSampleBytes( void )	{ return 2; }
 	int			DeviceDmaSpeed( void )		{ return SOUND_DMA_SPEED; }
 	int			DeviceSampleCount( void )	{ return m_deviceSampleCount; }
-
 private:
-	SDL_AudioDeviceID m_devId;
+    static void SDLCALL AudioCallbackEntry(void* context, SDL_AudioStream *stream, int additional_amount, int total_amount);
+    void    AudioCallback( Uint8* stream, int len );
 
-	static void SDLCALL AudioCallbackEntry(void *userdata, Uint8 * stream, int len);
-	void AudioCallback(Uint8 *stream, int len);
-
-	void	OpenWaveOut( void );
+    void	OpenWaveOut( void );
 	void	CloseWaveOut( void );
 	void	AllocateOutputBuffers();
 	void	FreeOutputBuffers();
 	bool	ValidWaveOut( void ) const;
 
-	int			m_deviceSampleCount;
+	int		m_deviceSampleCount;
 
-	int			m_buffersSent;
-	int			m_pauseCount;
-	int			m_readPos;
-	int			m_partialWrite;
+	SDL_AudioDeviceID m_devId;
+
+	int		m_buffersSent;
+	int		m_pauseCount;
+	int		m_readPos;
+	int		m_partialWrite;
 
 	// Memory for the wave data
 	uint8_t		*m_pBuffer;
+
+	void        *m_userdata;
 };
 
 static CAudioDeviceSDLAudio *g_wave = NULL;
@@ -167,6 +168,15 @@ bool CAudioDeviceSDLAudio::Init( void )
 	m_partialWrite = 0;
 	m_devId = 0;
 
+
+	SDL_AudioDeviceID m_devId;
+
+	int			m_buffersSent;
+	int			m_pauseCount;
+	int			m_readPos;
+	int			m_partialWrite;
+
+
 	OpenWaveOut();
 
 	if ( snd_firsttime )
@@ -186,10 +196,11 @@ void CAudioDeviceSDLAudio::Shutdown( void )
 //-----------------------------------------------------------------------------
 // WAV out device
 //-----------------------------------------------------------------------------
-inline bool CAudioDeviceSDLAudio::ValidWaveOut( void ) const 
-{ 
+inline bool CAudioDeviceSDLAudio::ValidWaveOut( void ) const
+{
 	return m_devId != 0;
 }
+
 
 
 //-----------------------------------------------------------------------------
@@ -234,31 +245,26 @@ void CAudioDeviceSDLAudio::OpenWaveOut( void )
 	// Open an audio device...
 	//  !!! FIXME: let user specify a device?
 	// !!! FIXME: we can handle quad, 5.1, 7.1, etc here.
-	SDL_AudioSpec desired, obtained;
-	memset(&desired, '\0', sizeof (desired));
-	desired.freq = SOUND_DMA_SPEED;
-	desired.format = AUDIO_S16SYS;
-	desired.channels = 2;
-	desired.samples = 2048;
-	desired.callback = &CAudioDeviceSDLAudio::AudioCallbackEntry;
-	desired.userdata = this;
-	m_devId = SDL_OpenAudioDevice(NULL, 0, &desired, &obtained, SDL_AUDIO_ALLOW_ANY_CHANGE);
 
-	if (!m_devId)
-		SDLAUDIO_FAIL("SDL_OpenAudioDevice()");
+	// SDL3 implementation
+	const SDL_AudioSpec spec = { SDL_AUDIO_S16, 2, 44100 };
+	SDL_AudioStream* stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, &CAudioDeviceSDLAudio::AudioCallbackEntry, this);
+	if (stream == NULL)
+	    SDLAUDIO_FAIL("SDL_OpenAudioDeviceStream()");
+		#undef SDLAUDIO_FAIL
 
-	#undef SDLAUDIO_FAIL
+    m_devId = SDL_GetAudioStreamDevice(stream);
 
-	// We're now ready to feed audio data to SDL!
+    // We're now ready to feed audio data to SDL!
 	AllocateOutputBuffers();
-	SDL_PauseAudioDevice(m_devId, 0);
+	SDL_ResumeAudioDevice(SDL_GetAudioStreamDevice(stream));
 
 #if defined( BINK_VIDEO ) && defined( LINUX )
 	// Tells Bink to use SDL for its audio decoding
-	if ( g_pVideo != NULL) 
+	if ( g_pVideo != NULL)
 	{
-		g_pVideo->SoundDeviceCommand( VideoSoundDeviceOperation::SET_SDL_PARAMS, NULL, (void *)&obtained );
-	
+		g_pVideo->SoundDeviceCommand( VideoSoundDeviceOperation::SET_SDL_PARAMS, NULL, stream);
+
 	}
 #endif
 }
@@ -266,8 +272,8 @@ void CAudioDeviceSDLAudio::OpenWaveOut( void )
 //-----------------------------------------------------------------------------
 // Closes the windows wave out device
 //-----------------------------------------------------------------------------
-void CAudioDeviceSDLAudio::CloseWaveOut( void ) 
-{ 
+void CAudioDeviceSDLAudio::CloseWaveOut( void )
+{
 	// none of these SDL_* functions are available to call if this is false.
 	if (m_devId)
 	{
@@ -283,7 +289,7 @@ void CAudioDeviceSDLAudio::CloseWaveOut( void )
 //-----------------------------------------------------------------------------
 void CAudioDeviceSDLAudio::AllocateOutputBuffers()
 {
-	// Allocate and lock memory for the waveform data.  
+	// Allocate and lock memory for the waveform data.
 	const int nBufferSize = WAV_BUFFER_SIZE * WAV_BUFFERS;
 	m_pBuffer = new uint8_t[nBufferSize];
 	memset(m_pBuffer, '\0', nBufferSize);
@@ -312,7 +318,7 @@ int CAudioDeviceSDLAudio::PaintBegin( float mixAheadTime, int soundtime, int pai
 	//  paintedtime - total samples that have been mixed at speed
 	//  endtime - target for samples in mixahead buffer at speed
 	unsigned int endtime = soundtime + mixAheadTime * DeviceDmaSpeed();
-	
+
 	int samps = DeviceSampleCount() >> (DeviceChannels()-1);
 
 	if ((int)(endtime - soundtime) > samps)
@@ -320,75 +326,13 @@ int CAudioDeviceSDLAudio::PaintBegin( float mixAheadTime, int soundtime, int pai
 
 	if ((endtime - paintedtime) & 0x3)
 	{
-		// The difference between endtime and painted time should align on 
+		// The difference between endtime and painted time should align on
 		// boundaries of 4 samples.  This is important when upsampling from 11khz -> 44khz.
 		endtime -= (endtime - paintedtime) & 0x3;
 	}
 
 	return endtime;
 }
-
-void CAudioDeviceSDLAudio::AudioCallbackEntry(void *userdata, Uint8 *stream, int len)
-{
-	((CAudioDeviceSDLAudio *) userdata)->AudioCallback(stream, len);
-}
-
-void CAudioDeviceSDLAudio::AudioCallback(Uint8 *stream, int len)
-{
-	if (!m_devId)
-	{
-		debugsdl("SDLAUDIO: uhoh, no audio device!\n");
-		return;  // can this even happen?
-	}
-
-	const int totalWriteable = len;
-#if defined( BINK_VIDEO ) && defined( LINUX )
-	Uint8 *stream_orig = stream;
-#endif
-	debugsdl("SDLAUDIO: writable size is %d.\n", totalWriteable);
-
-	Assert(len <= (WAV_BUFFERS * WAV_BUFFER_SIZE));
-
-	while (len > 0)
-	{
-		// spaceAvailable == bytes before we overrun the end of the ring buffer.
-		const int spaceAvailable = ((WAV_BUFFERS * WAV_BUFFER_SIZE) - m_readPos);
-		const int writeLen = (len < spaceAvailable) ? len : spaceAvailable;
-
-		if (writeLen > 0)
-		{
-			const uint8_t *buf = m_pBuffer + m_readPos;
-			debugsdl("SDLAUDIO: Writing %d bytes...\n", writeLen);
-
-			#if 0
-			static FILE *io = NULL;
-			if (io == NULL) io = fopen("dumpplayback.raw", "wb");
-			if (io != NULL) { fwrite(buf, writeLen, 1, io); fflush(io); }
-			#endif
-
-			memcpy(stream, buf, writeLen);
-			stream += writeLen;
-			len -= writeLen;
-			Assert(len >= 0);
-		}
-
-		m_readPos = len ? 0 : (m_readPos + writeLen);  // if still bytes to write to stream, we're rolling around the ring buffer.
-	}
-
-#if defined( BINK_VIDEO ) && defined( LINUX )
-	// Mix in Bink movie audio if that stuff is playing.
-	if ( g_pVideo != NULL) 
-	{
-		g_pVideo->SoundDeviceCommand( VideoSoundDeviceOperation::SDLMIXER_CALLBACK, (void *)stream_orig, (void *)&totalWriteable );
-	}
-#endif
-
-	// Translate between bytes written and buffers written.
-	m_partialWrite += totalWriteable;
-	m_buffersSent += m_partialWrite / WAV_BUFFER_SIZE;
-	m_partialWrite %= WAV_BUFFER_SIZE;
-}
-
 
 //-----------------------------------------------------------------------------
 // Actually performs the mixing
@@ -411,6 +355,79 @@ int CAudioDeviceSDLAudio::GetOutputPosition( void )
 	return (m_readPos >> SAMPLE_16BIT_SHIFT)/DeviceChannels();
 }
 
+void SDLCALL CAudioDeviceSDLAudio::AudioCallbackEntry(void* context, SDL_AudioStream *stream, int additional_amount, int total_amount)
+{
+    if(context != NULL)
+    {
+        Uint8* data = SDL_stack_alloc(Uint8, additional_amount);
+        if(additional_amount > 0)
+        {
+            ((CAudioDeviceSDLAudio *) context)->AudioCallback(data, additional_amount);
+            SDL_PutAudioStreamData(stream, data, additional_amount);
+            SDL_stack_free(data);
+        }
+    }
+}
+
+void CAudioDeviceSDLAudio::AudioCallback(Uint8* data, int len)
+{
+	if (!m_devId)
+	{
+		debugsdl("SDLAUDIO: uhoh, no audio device!\n");
+		return;  // can this even happen?
+	}
+
+	const int totalWriteable = len;
+
+	#if defined( BINK_VIDEO ) && defined( LINUX )
+	   Uint8* stream_orig = data;
+	#endif
+
+	debugsdl("SDLAUDIO: writable size is %d.\n", totalWriteable);
+
+	Assert(len <= (WAV_BUFFERS * WAV_BUFFER_SIZE));
+	while (len > 0)
+	{
+		// spaceAvailable == bytes before we overrun the end of the ring buffer.
+		const int spaceAvailable = ((WAV_BUFFERS * WAV_BUFFER_SIZE) - m_readPos);
+		const int writeLen = (len < spaceAvailable) ? len : spaceAvailable;
+
+		if (writeLen > 0)
+		{
+			const uint8_t *buf = m_pBuffer + m_readPos;
+			debugsdl("SDLAUDIO: Writing %d bytes...\n", writeLen);
+
+			#if 0
+			static FILE *io = NULL;
+			if (io == NULL) io = fopen("dumpplayback.raw", "wb");
+			if (io != NULL) { fwrite(buf, writeLen, 1, io); fflush(io); }
+			#endif
+
+			memcpy(data, buf, writeLen);
+			data += writeLen;
+			len -= writeLen;
+
+			Assert(len >= 0);
+		}
+
+		m_readPos = len ? 0 : (m_readPos + writeLen);  // if still bytes to write to stream, we're rolling around the ring buffer.
+	}
+
+
+	#if defined( BINK_VIDEO ) && defined( LINUX )
+	    // Mix in Bink movie audio if that stuff is playing.
+	    if ( g_pVideo != NULL)
+	    {
+	    	g_pVideo->SoundDeviceCommand( VideoSoundDeviceOperation::SDLMIXER_CALLBACK, (void *)stream_orig, (void *)&totalWriteable );
+	    }
+	#endif
+
+
+	// Translate between bytes written and buffers written.
+	m_partialWrite += totalWriteable;
+	m_buffersSent += m_partialWrite / WAV_BUFFER_SIZE;
+	m_partialWrite %= WAV_BUFFER_SIZE;
+}
 
 //-----------------------------------------------------------------------------
 // Pausing
@@ -421,7 +438,7 @@ void CAudioDeviceSDLAudio::Pause( void )
 	if (m_pauseCount == 1)
 	{
 		debugsdl("SDLAUDIO: PAUSE\n");
-		SDL_PauseAudioDevice(m_devId, 1);
+		SDL_PauseAudioDevice(m_devId);
 	}
 }
 
@@ -434,7 +451,7 @@ void CAudioDeviceSDLAudio::UnPause( void )
 		if (m_pauseCount == 0)
 		{
 			debugsdl("SDLAUDIO: UNPAUSE\n");
-			SDL_PauseAudioDevice(m_devId, 0);
+			SDL_ResumeAudioDevice(m_devId);
 		}
 	}
 }
@@ -479,7 +496,7 @@ void CAudioDeviceSDLAudio::MixUpsample( int sampleCount, int filtertype )
 {
 	paintbuffer_t *ppaint = MIX_GetCurrentPaintbufferPtr();
 	int ifilter = ppaint->ifilter;
-	
+
 	Assert (ifilter < CPAINTFILTERS);
 
 	S_MixBufferUpsample2x( sampleCount, ppaint->pbuf, &(ppaint->fltmem[ifilter][0]), CPAINTFILTERMEM, filtertype );
@@ -544,7 +561,7 @@ void CAudioDeviceSDLAudio::TransferSamples( int end )
 {
 	int		lpaintedtime = g_paintedtime;
 	int		endtime = end;
-	
+
 	// resumes playback...
 
 	if ( m_pBuffer )
@@ -571,4 +588,3 @@ void CAudioDeviceSDLAudio::ApplyDSPEffects( int idsp, portable_samplepair_t *pbu
 }
 
 #endif // !DEDICATED
-

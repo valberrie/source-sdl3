@@ -14,7 +14,7 @@ $Configuration
 	$Compiler
 	{
 		$AdditionalIncludeDirectories		"$BASE;$SRCDIR\thirdparty\SDL"	[!$SDL] // If $SDL, then we already have this from source_video_base.vpc.
-		$PreprocessorDefinitions			"$BASE;VERSION_SAFE_STEAM_API_INTERFACES" 
+		$PreprocessorDefinitions			"$BASE;VERSION_SAFE_STEAM_API_INTERFACES"
 	}
 	$Linker
 	{
@@ -50,7 +50,7 @@ $Project "inputsystem"
 	{
 		$Lib	tier1
 		$Lib	tier2
-		$ImpLib SDL2
+		$ImpLib SDL3
 		$Implib	"steam_api"						[($WIN32||$WIN64||$POSIX||$PS3)&&!$NO_STEAM]
 	}
 }

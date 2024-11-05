@@ -37,7 +37,7 @@ void GLMRendererInfo::Init( GLMRendererInfoFields *info )
         m_info.m_fullscreen = 0;
         m_info.m_accelerated = 1;
         m_info.m_windowed = 1;
-        
+
         m_info.m_ati = true;
         m_info.m_atiNewer = true;
 
@@ -58,13 +58,13 @@ void GLMRendererInfo::Init( GLMRendererInfoFields *info )
         {
                 m_info.m_hasNativeClipVertexMode = false;
         }
-        
+
         // or maybe enabled them..
         if (CommandLine()->FindParm("-glmenableclipplanes"))
         {
                 m_info.m_hasNativeClipVertexMode = true;
         }
-        
+
 #ifdef TOGLES
         m_info.m_hasOcclusionQuery = true;
         m_info.m_hasFramebufferBlit = true;
@@ -78,14 +78,14 @@ void GLMRendererInfo::Init( GLMRendererInfoFields *info )
         GLint nMaxAniso = 0;
         gGL->glGetIntegerv( GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &nMaxAniso );
         m_info.m_maxAniso = clamp<int>( nMaxAniso, 0, 16 );
-        
+
         // We don't currently used bindable uniforms, but I've been experimenting with them so I might as well check this in just in case they turn out to be useful.
         m_info.m_hasBindableUniforms = gGL->m_bHave_GL_EXT_bindable_uniform;
         m_info.m_hasBindableUniforms = false;           // !!! FIXME hardwiring this path to false until we see how to accelerate it properly
         m_info.m_maxVertexBindableUniforms = 0;
         m_info.m_maxFragmentBindableUniforms = 0;
         m_info.m_maxBindableUniformSize = 0;
-        
+
         if (m_info.m_hasBindableUniforms)
         {
                 gGL->glGetIntegerv(GL_MAX_VERTEX_BINDABLE_UNIFORMS_EXT, &m_info.m_maxVertexBindableUniforms);
@@ -113,7 +113,7 @@ void GLMRendererInfo::Init( GLMRendererInfoFields *info )
     // m_cantBlitReliably path doesn't work right now, and the Intel path is different for us on Linux/Win7 anyway
         m_info.m_cantBlitReliably = false;
 #endif
-                
+
         if (CommandLine()->FindParm("-glmenabletrustblit"))
         {
                 m_info.m_cantBlitReliably = false;                      // we trust the blit, so set the cant-blit cap to false
@@ -125,21 +125,21 @@ void GLMRendererInfo::Init( GLMRendererInfoFields *info )
 
         // MSAA resolve issues
         m_info.m_cantResolveFlipped     = false;
-        
+
 
 #if defined( OSX )
-        m_info.m_cantResolveScaled = true;                                                              // generally true until new extension ships     
+        m_info.m_cantResolveScaled = true;                                                              // generally true until new extension ships
 #else
         // DON'T just slam this to false and run without first testing with -gl_debug enabled on NVidia/AMD/etc.
         // This path needs the m_bHave_GL_EXT_framebuffer_multisample_blit_scaled extension.
         m_info.m_cantResolveScaled = true;
-                
+
         if ( gGL->m_bHave_GL_EXT_framebuffer_multisample_blit_scaled )
         {
                 m_info.m_cantResolveScaled = false;
         }
 #endif
-        
+
         // gamma decode impacting shader codegen
         m_info.m_costlyGammaFlips = false;
 }
@@ -182,7 +182,7 @@ GLMDisplayDB::GLMDisplayDB ()
 {
         SDLAPP_FUNC;
 
-        m_renderer.m_display = NULL;    
+        m_renderer.m_display = NULL;
 }
 
 GLMDisplayDB::~GLMDisplayDB     ( void )
@@ -204,7 +204,7 @@ GLMDisplayDB::~GLMDisplayDB     ( void )
 #define GL_GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX    0x9048
 #endif
 
-#ifndef GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX 
+#ifndef GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX
 #define GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX  0x9049
 #endif
 
@@ -219,7 +219,7 @@ GLMDisplayDB::~GLMDisplayDB     ( void )
 #ifndef GL_RENDERBUFFER_FREE_MEMORY_ATI
 #define GL_RENDERBUFFER_FREE_MEMORY_ATI                                 0x87FD
 #endif
-        
+
 void GLMDisplayDB::PopulateRenderers( void )
 {
         SDLAPP_FUNC;
@@ -231,7 +231,7 @@ void GLMDisplayDB::PopulateRenderers( void )
 
         // Assume 512MB of available video memory
         fields.m_vidMemory = 512 * 1024 * 1024;
-        
+
         DebugPrintf( "GL_NVX_gpu_memory_info: %s\n", gGL->m_bHave_GL_NVX_gpu_memory_info ? "AVAILABLE" : "UNAVAILABLE" );
         DebugPrintf( "GL_ATI_meminfo: %s\n", gGL->m_bHave_GL_ATI_meminfo ? "AVAILABLE" : "UNAVAILABLE" );
 
@@ -277,7 +277,7 @@ void GLMDisplayDB::PopulateRenderers( void )
                         // param[2] - total auxiliary memory free
                         // param[3] - largest auxiliary free block
 
-                        DebugPrintf( "GL_ATI_meminfo: GL_TEXTURE_FREE_MEMORY_ATI: Total Free: %i, Largest Avail: %i, Total Aux: %i, Largest Aux Avail: %i\n", 
+                        DebugPrintf( "GL_ATI_meminfo: GL_TEXTURE_FREE_MEMORY_ATI: Total Free: %i, Largest Avail: %i, Total Aux: %i, Largest Aux Avail: %i\n",
                                 nAvail[0], nAvail[1], nAvail[2], nAvail[3] );
 
                         uint64 nActualAvail = static_cast<uint64>( nAvail[0] ) * 1024;
@@ -295,7 +295,7 @@ void GLMDisplayDB::PopulateRenderers( void )
         {
                 fields.m_pciDeviceID = GLM_OPENGL_LOW_PERF_DEVICE_ID;
         }
-        
+
 /*      fields.m_colorModes = (uint)-1;
         fields.m_bufferModes = (uint)-1;
         fields.m_depthModes = (uint)-1;
@@ -333,14 +333,14 @@ void    GLMDisplayDB::Populate(void)
         SDLAPP_FUNC;
 
         this->PopulateRenderers();
-        
+
         this->PopulateFakeAdapters( 0 );
 
         #if GLMDEBUG
                 this->Dump();
         #endif
 }
-        
+
 
 
 int             GLMDisplayDB::GetFakeAdapterCount( void )
@@ -366,10 +366,10 @@ bool    GLMDisplayDB::GetFakeAdapterInfo( int fakeAdapterIndex, int *rendererOut
 
         bool rendResult = GetRendererInfo( *rendererOut, rendererInfoOut );
         bool dispResult = GetDisplayInfo( *rendererOut, *displayOut, displayInfoOut );
-        
+
         return rendResult || dispResult;
 }
-        
+
 
 int             GLMDisplayDB::GetRendererCount( void )
 {
@@ -386,7 +386,7 @@ bool    GLMDisplayDB::GetRendererInfo( int rendererIndex, GLMRendererInfoFields 
 
         if (rendererIndex >= GetRendererCount())
                 return true; // fail
-        
+
         *infoOut = m_renderer.m_info;
 
         return false;
@@ -401,7 +401,7 @@ int             GLMDisplayDB::GetDisplayCount( int rendererIndex )
                 Assert( 0 );
                 return 0; // fail
         }
-        
+
         return 1;
 }
 
@@ -410,13 +410,13 @@ bool    GLMDisplayDB::GetDisplayInfo( int rendererIndex, int displayIndex, GLMDi
         SDLAPP_FUNC;
 
         memset( infoOut, 0, sizeof( GLMDisplayInfoFields ) );
-        
+
         if (rendererIndex >= GetRendererCount())
                 return true; // fail
-        
+
         if (displayIndex >= GetDisplayCount(rendererIndex))
                 return true; // fail
-        
+
         *infoOut = m_renderer.m_display->m_info;
 
         return false;
@@ -428,10 +428,10 @@ int             GLMDisplayDB::GetModeCount( int rendererIndex, int displayIndex 
 
         if (rendererIndex >= GetRendererCount())
                 return 0; // fail
-        
+
         if (displayIndex >= GetDisplayCount(rendererIndex))
                 return 0; // fail
-                
+
         return m_renderer.m_display->m_modes->Count();
 }
 
@@ -440,16 +440,16 @@ bool    GLMDisplayDB::GetModeInfo( int rendererIndex, int displayIndex, int mode
         SDLAPP_FUNC;
 
         memset( infoOut, 0, sizeof( GLMDisplayModeInfoFields ) );
-        
+
         if ( rendererIndex >= GetRendererCount())
                 return true; // fail
-        
+
         if (displayIndex >= GetDisplayCount( rendererIndex ) )
                 return true; // fail
-        
+
         if ( modeIndex >= GetModeCount( rendererIndex, displayIndex ) )
                 return true; // fail
-        
+
         if ( modeIndex >= 0 )
         {
                 GLMDisplayMode *displayModeInfo = m_renderer.m_display->m_modes->Element( modeIndex );
@@ -509,7 +509,7 @@ extern "C" int DisplayModeSortFunction( GLMDisplayMode * const *A, GLMDisplayMod
 
         // check refreshrate - higher should win
         if ( (*A)->m_info.m_modeRefreshHz > (*B)->m_info.m_modeRefreshHz )
-        {       
+        {
                 return bigger;
         }
         else if ( (*A)->m_info.m_modeRefreshHz < (*B)->m_info.m_modeRefreshHz )
@@ -522,17 +522,16 @@ extern "C" int DisplayModeSortFunction( GLMDisplayMode * const *A, GLMDisplayMod
         int areab = (*B)->m_info.m_modePixelWidth * (*B)->m_info.m_modePixelHeight;
 
         if ( areaa > areab )
-        {       
+        {
                 return bigger;
         }
         else if ( areaa < areab )
         {
                 return smaller;
         }
-        
+
         return 0;       // equal rank
 }
-
 
 void    GLMDisplayInfo::PopulateModes( void )
 {
@@ -541,16 +540,19 @@ void    GLMDisplayInfo::PopulateModes( void )
         Assert( !m_modes );
         m_modes = new CUtlVector< GLMDisplayMode* >;
 
-        int nummodes = SDL_GetNumVideoDisplays();
+        int nummodes = 0;
+        SDL_DisplayID* displays = SDL_GetDisplays(&nummodes);
 
-        for ( int i = 0; i < nummodes; i++ )
+        if(displays)
         {
+            for ( int i = 0; i < nummodes; i++ )
+            {
                 SDL_Rect rect = { 0, 0, 0, 0 };
-
-                if ( !SDL_GetDisplayBounds( i, &rect ) && rect.w && rect.h )
+                if ( SDL_GetDisplayBounds( displays[i], &rect ) && rect.w && rect.h )
                 {
-                        m_modes->AddToTail( new GLMDisplayMode( rect.w, rect.h, 0 ) );
+                    m_modes->AddToTail( new GLMDisplayMode( rect.w, rect.h, 0 ) );
                 }
+            }
         }
 
         // Add a big pile of window resolutions.

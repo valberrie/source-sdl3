@@ -1,6 +1,6 @@
 //========= Copyright Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 // $NoKeywords: $
 //=============================================================================//
@@ -40,8 +40,8 @@
 #endif
 
 #ifdef USE_SDL
-#include "SDL_clipboard.h"
-#include "SDL_error.h"
+#include "SDL3/SDL_clipboard.h"
+#include "SDL3/SDL_error.h"
 #endif
 
 #define PROTECTED_THINGS_DISABLE
@@ -135,16 +135,16 @@ private:
 	KeyValues *m_pUserConfigData;
 	char m_szFileName[MAX_PATH];
 	char m_szPathID[MAX_PATH];
-	
+
 	KeyValues *m_pRegistry;
 	double m_flRegistrySaveTime;
 	bool m_bRegistryDirty;
-	
+
 	char m_szRegistryPath[ MAX_PATH ];
 #ifdef OSX
 	PasteboardRef m_PasteBoardRef;
 #endif
-	
+
 };
 
 
@@ -172,9 +172,9 @@ CSystem::CSystem()
 #ifdef OSX
 	PasteboardCreate( kPasteboardClipboard, &m_PasteBoardRef );
 #endif
-	
+
 	Q_snprintf( m_szRegistryPath, sizeof(m_szRegistryPath), "%s", REGISTRY_NAME );
-	
+
 	m_pRegistry = new KeyValues( "registry" );
 }
 
@@ -188,7 +188,7 @@ CSystem::~CSystem()
 	CFRelease( m_PasteBoardRef );
 #endif
 }
-							
+
 void CSystem::SaveRegistryToFile( bool bForce )
 {
 	/*if ( m_pRegistry && ( m_bRegistryDirty || bForce ) && g_pFullFileSystem )
@@ -200,7 +200,7 @@ void CSystem::SaveRegistryToFile( bool bForce )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 void CSystem::Shutdown()
 {
@@ -237,7 +237,7 @@ void CSystem::RunFrame()
 			m_iStaticMouseOldY = y;
 		}
 	}
-	
+
 	if ( m_flFrameTime - m_flRegistrySaveTime > REGISTRY_SAVE_INTERVAL )
 	{
 		m_flRegistrySaveTime = m_flFrameTime;
@@ -390,14 +390,14 @@ int CSystem::GetClipboardTextCount()
 #ifdef OSX
 	ItemCount count;
 	PasteboardSynchronize( m_PasteBoardRef );
-	
+
 	OSStatus err = PasteboardGetItemCount( m_PasteBoardRef, &count );
 	if ( err != noErr )
 		return 0;
-	
+
 	if ( count <= 0 )
 		return 0;
-	
+
 	PasteboardItemID ItemID;
 	// always use the last item on the clipboard for any cut and paste data
 	err = PasteboardGetItemIdentifier( m_PasteBoardRef, count, &ItemID );
@@ -407,7 +407,7 @@ int CSystem::GetClipboardTextCount()
 	err = PasteboardCopyItemFlavorData ( m_PasteBoardRef, ItemID, CFSTR ("public.utf8-plain-text"), &outData);
 	if ( err != noErr )
 		return 0;
-	
+
 	int copyLen = CFDataGetLength( outData );
 	CFRelease( outData );
 	return (int)copyLen + 1;
@@ -438,11 +438,11 @@ int CSystem::GetClipboardText(int offset, char *buf, int bufLen)
 #ifdef OSX
 	ItemCount count;
 	PasteboardSynchronize( m_PasteBoardRef );
-	
+
 	OSStatus err = PasteboardGetItemCount( m_PasteBoardRef, &count );
 	if ( err != noErr )
 		return 0;
-	
+
 	char *pchOutData;
 	PasteboardItemID ItemID;
 	// pull the last item from the clipboard
@@ -557,7 +557,7 @@ bool CSystem::SetWatchForComputerUse(bool state)
 	{
 		// disable watching
 	}
-	
+
 	return true;
 }
 
@@ -627,7 +627,7 @@ KeyValues *CSystem::GetUserConfigFileData(const char *dialogName, int dialogID)
 void CSystem::SetUserConfigFile(const char *fileName, const char *pathName)
 {
 	//m_pRegistry->LoadFromFile( g_pFullFileSystem, m_szRegistryPath, NULL );
-	
+
 	if (!m_pUserConfigData)
 	{
 		m_pUserConfigData = new KeyValues("UserConfigData");
@@ -665,7 +665,7 @@ bool CSystem::CommandLineParamExists(const char *paramName)
 {
 	if ( Q_strstr( Plat_GetCommandLine(), paramName ) )
 		return true;
-	
+
 	return false;
 }
 
@@ -675,7 +675,7 @@ bool CSystem::CommandLineParamExists(const char *paramName)
 bool CSystem::GetCommandLineParamValue(const char *paramName, char *value, int valueBufferSize)
 {
 	Assert( false );
-	
+
 	return true;
 }
 

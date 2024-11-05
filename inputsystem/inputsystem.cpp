@@ -1,6 +1,6 @@
 //========= Copyright Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 //===========================================================================//
 
@@ -14,7 +14,7 @@
 
 #if defined( USE_SDL )
 #undef M_PI
-#include "SDL.h"
+#include "SDL3/SDL.h"
 static void initKeymap(void);
 #endif
 
@@ -27,7 +27,7 @@ ConVar joy_xcontroller_found( "joy_xcontroller_found", "1", FCVAR_HIDDEN, "Autom
 // Singleton instance
 //-----------------------------------------------------------------------------
 static CInputSystem g_InputSystem;
-EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CInputSystem, IInputSystem, 
+EXPOSE_SINGLE_INTERFACE_GLOBALVAR( CInputSystem, IInputSystem,
 						INPUTSYSTEM_INTERFACE_VERSION, g_InputSystem );
 
 
@@ -79,7 +79,7 @@ CInputSystem::CInputSystem()
 	m_bSteamControllerActionsInitialized = false;
 	m_bSteamControllerActive = false;
 
-	Assert( (MAX_JOYSTICKS + 7) >> 3 << sizeof(unsigned short) ); 
+	Assert( (MAX_JOYSTICKS + 7) >> 3 << sizeof(unsigned short) );
 
 	m_pXInputDLL = NULL;
 	m_pRawInputDLL = NULL;
@@ -166,10 +166,10 @@ InitReturnVal_t CInputSystem::Init()
 	ButtonCode_UpdateScanCodeLayout();
 
 	joy_xcontroller_found.SetValue( 0 );
-	
+
 	if( !m_bConsoleTextMode )
 		InitializeTouch();
-	
+
 	if ( IsPC() && !m_bConsoleTextMode )
 	{
 		InitializeJoysticks();
@@ -220,7 +220,7 @@ InitReturnVal_t CInputSystem::Init()
 
 #endif
 
-	return INIT_OK; 
+	return INIT_OK;
 }
 
 bool CInputSystem::Connect( CreateInterfaceFn factory )
@@ -248,7 +248,7 @@ void CInputSystem::Shutdown()
 		m_hEvent = NULL;
 	}
 #endif
-	
+
 	if ( IsPC() )
 	{
 		ShutdownJoysticks();
@@ -325,9 +325,9 @@ void CInputSystem::AttachToWindow( void* hWnd )
 	if ( m_bRawInputSupported )
 	{
 		RAWINPUTDEVICE Rid[1];
-		Rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC; 
-		Rid[0].usUsage = HID_USAGE_GENERIC_MOUSE; 
-		Rid[0].dwFlags = RIDEV_INPUTSINK;   
+		Rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
+		Rid[0].usUsage = HID_USAGE_GENERIC_MOUSE;
+		Rid[0].dwFlags = RIDEV_INPUTSINK;
 		Rid[0].hwndTarget = g_InputSystem.m_hAttachedHWnd; // GetHhWnd;
 		pfnRegisterRawInputDevices(Rid, ARRAYSIZE(Rid), sizeof(Rid[0]));
 	}
@@ -380,7 +380,7 @@ void CInputSystem::EnableMessagePump( bool bEnable )
 {
 	m_bPumpEnabled = bEnable;
 }
-	
+
 
 //-----------------------------------------------------------------------------
 // Clears the input state, doesn't generate key-up messages
@@ -496,7 +496,7 @@ void CInputSystem::PostButtonPressedEvent( InputEventType_t nType, int nTick, Bu
 	if ( !state.m_ButtonState.IsBitSet( scanCode ) )
 	{
 		// Update button state
-		state.m_ButtonState.Set( scanCode ); 
+		state.m_ButtonState.Set( scanCode );
 		state.m_ButtonPressedTick[ scanCode ] = nTick;
 
 		// Add this event to the app-visible event queue
@@ -522,7 +522,7 @@ void CInputSystem::PostButtonReleasedEvent( InputEventType_t nType, int nTick, B
 	if ( state.m_ButtonState.IsBitSet( scanCode ) )
 	{
 		// Update button state
-		state.m_ButtonState.Clear( scanCode ); 
+		state.m_ButtonState.Clear( scanCode );
 		state.m_ButtonReleasedTick[ scanCode ] = nTick;
 
 		// Add this event to the app-visible event queue
@@ -545,7 +545,7 @@ void CInputSystem::PostButtonReleasedEvent( InputEventType_t nType, int nTick, B
 void CInputSystem::ProcessEvent( UINT uMsg, WPARAM wParam, LPARAM lParam )
 {
 #if !defined( POSIX )
-	// To prevent subtle input timing bugs, all button events must be fed 
+	// To prevent subtle input timing bugs, all button events must be fed
 	// through the window proc once per frame, same as the keyboard and mouse.
 	HWND hWnd = GetFocus();
 	WNDPROC windowProc = (WNDPROC)GetWindowLongPtrW(hWnd, GWLP_WNDPROC );
@@ -602,7 +602,7 @@ void CInputSystem::PollInputState_Windows()
 			DispatchMessage( &msg );
 		}
 
-		// NOTE: Under some implementations of Win9x, 
+		// NOTE: Under some implementations of Win9x,
 		// dispatching messages can cause the FPU control word to change
 		SetupFPUControlWord();
 	}
@@ -679,10 +679,10 @@ bool MapCocoaVirtualKeyToButtonCode( int nCocoaVirtualKeyCode, ButtonCode_t *pOu
 {
 	if ( nCocoaVirtualKeyCode < 0 )
 		*pOut = (ButtonCode_t)(-1 * nCocoaVirtualKeyCode);
-	else 
+	else
 	{
 		nCocoaVirtualKeyCode &= 0x000000ff;
-	
+
 		*pOut = (ButtonCode_t)scantokey[nCocoaVirtualKeyCode];
 	}
 
@@ -729,7 +729,7 @@ void CInputSystem::PollInputState_Platform()
 							//	followed by space keyup. So we ignore all BUTTON_CODE_NONE events here.
 							PostButtonPressedEvent( IE_ButtonPressed, m_nLastSampleTick, scanCode, virtualCode );
 						}
-						
+
 						InputEvent_t event;
 						memset( &event, 0, sizeof(event) );
 						event.m_nTick = GetPollTick();
@@ -737,7 +737,7 @@ void CInputSystem::PollInputState_Platform()
 						event.m_nType = IE_FirstVguiEvent + 4;
 						event.m_nData = scanCode;
 						g_pInputSystem->PostUserEvent( event );
-						
+
 					}
 
 					if ( !(pEvent->m_ModifierKeyMask & (1<<eCommandKey) ) && pEvent->m_VirtualKeyCode >= 0 && pEvent->m_UnicodeKey > 0 )
@@ -750,7 +750,7 @@ void CInputSystem::PollInputState_Platform()
 						event.m_nData = (int)pEvent->m_UnicodeKey;
 						g_pInputSystem->PostUserEvent( event );
 					}
-					
+
 				}
 				break;
 
@@ -819,22 +819,22 @@ void CInputSystem::PollInputState_Platform()
 					g_pInputSystem->PostUserEvent( event );
 				}
 				break;
-					
+
 				case CocoaEvent_MouseScroll:
 				{
 					ButtonCode_t code = (short)pEvent->m_MousePos[1] > 0 ? MOUSE_WHEEL_UP : MOUSE_WHEEL_DOWN;
 					state.m_ButtonPressedTick[ code ] = state.m_ButtonReleasedTick[ code ] = m_nLastSampleTick;
 					PostEvent( IE_ButtonPressed, m_nLastSampleTick, code, code );
 					PostEvent( IE_ButtonReleased, m_nLastSampleTick, code, code );
-					
+
 					state.m_pAnalogDelta[ MOUSE_WHEEL ] = pEvent->m_MousePos[1];
 					state.m_pAnalogValue[ MOUSE_WHEEL ] += state.m_pAnalogDelta[ MOUSE_WHEEL ];
 					PostEvent( IE_AnalogValueChanged, m_nLastSampleTick, MOUSE_WHEEL, state.m_pAnalogValue[ MOUSE_WHEEL ], state.m_pAnalogDelta[ MOUSE_WHEEL ] );
 				}
 				break;
-					
+
 				case CocoaEvent_AppActivate:
-				{		
+				{
 					InputEvent_t event;
 					memset( &event, 0, sizeof(event) );
 					event.m_nType = IE_FirstAppEvent + 2; // IE_AppActivated (defined in sys_mainwind.cpp).
@@ -1016,7 +1016,7 @@ int CInputSystem::GetJoystickCount() const
 
 void CInputSystem::EnableJoystickInput( int nJoystick, bool bEnable )
 {
-	m_JoysticksEnabled.SetFlag( 1 << nJoystick, bEnable ); 
+	m_JoysticksEnabled.SetFlag( 1 << nJoystick, bEnable );
 }
 
 void CInputSystem::EnableJoystickDiagonalPOV( int nJoystick, bool bEnable )
@@ -1031,7 +1031,7 @@ int CInputSystem::GetPollTick() const
 {
 	return m_nLastPollTick;
 }
-	
+
 bool CInputSystem::IsButtonDown( ButtonCode_t code ) const
 {
 	return m_InputState[INPUT_STATE_CURRENT].m_ButtonState.IsBitSet( code );
@@ -1083,7 +1083,7 @@ void CInputSystem::PostUserEvent( const InputEvent_t &event )
 	state.m_bDirty = true;
 }
 
-	
+
 //-----------------------------------------------------------------------------
 // Chains the window message to the previous wndproc
 //-----------------------------------------------------------------------------
@@ -1093,16 +1093,16 @@ inline LRESULT CInputSystem::ChainWindowMessage( HWND hwnd, UINT uMsg, WPARAM wP
 	if ( m_ChainedWndProc )
 		return CallWindowProc( m_ChainedWndProc, hwnd, uMsg, wParam, lParam );
 #endif
-	// FIXME: This comment is lifted from vguimatsurface; 
+	// FIXME: This comment is lifted from vguimatsurface;
 	// may not apply in future when the system is completed.
 
 	// This means the application is driving the messages (calling our window procedure manually)
-	// rather than us hooking their window procedure. The engine needs to do this in order for VCR 
+	// rather than us hooking their window procedure. The engine needs to do this in order for VCR
 	// mode to play back properly.
-	return 0;	
+	return 0;
 }
 
-	
+
 //-----------------------------------------------------------------------------
 // Release all buttons
 //-----------------------------------------------------------------------------
@@ -1185,7 +1185,7 @@ void CInputSystem::UpdateMouseButtonState( int nButtonMask, ButtonCode_t dblClic
 		bool bDown = ( nButtonMask & ( 1 << i ) ) != 0;
 		if ( bDown )
 		{
-			InputEventType_t type = ( code != dblClickCode ) ? IE_ButtonPressed : IE_ButtonDoubleClicked; 
+			InputEventType_t type = ( code != dblClickCode ) ? IE_ButtonPressed : IE_ButtonDoubleClicked;
 			PostButtonPressedEvent( type, m_nLastSampleTick, code, code );
 		}
 		else
@@ -1277,7 +1277,7 @@ LRESULT CInputSystem::WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
 	InputState_t &state = m_InputState[ m_bIsPolling ];
 	switch( uMsg )
 	{
-	
+
 #if !defined( USE_SDL )
 	case WM_ACTIVATEAPP:
 		if ( hwnd == m_hAttachedHWnd )
@@ -1467,11 +1467,11 @@ LRESULT CInputSystem::WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
 				pfnGetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER));
 
 				RAWINPUT* raw = (RAWINPUT*)lpb;
-				if (raw->header.dwType == RIM_TYPEMOUSE) 
+				if (raw->header.dwType == RIM_TYPEMOUSE)
 				{
 					m_mouseRawAccumX += raw->data.mouse.lLastX;
 					m_mouseRawAccumY += raw->data.mouse.lLastY;
-				} 
+				}
 			}
 		}
 		break;
@@ -1489,7 +1489,7 @@ LRESULT CInputSystem::WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
  		break;
 
 	}
-	
+
 #if defined( PLATFORM_WINDOWS_PC ) && !defined( USE_SDL )
 	// Can't put this in the case statement, it's not constant
 	if ( uMsg == m_uiMouseWheel )
@@ -1556,6 +1556,7 @@ ISteamController* CInputSystem::SteamControllerInterface()
 void CInputSystem::StartTextInput()
 {
 #ifdef USE_SDL
-	SDL_StartTextInput();
+    // HACK: this function was changed in SDL3 to require an SDL_Window*. this will have to do for now
+	SDL_StartTextInput(SDL_GetKeyboardFocus());
 #endif
 }

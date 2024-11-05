@@ -84,7 +84,7 @@ def build(bld):
 		'checksum_engine.cpp',
 		'ccs.cpp',
 		'clockdriftmgr.cpp',
-		'cl_check_process.cpp',	
+		'cl_check_process.cpp',
 		'cmd.cpp',
 		'cmodel.cpp',
 		'cmodel_bsp.cpp',
@@ -128,7 +128,7 @@ def build(bld):
 		'gametrace_engine.cpp',
 		'hltvclient.cpp',
 		'hltvclientstate.cpp',
-		'hltvdemo.cpp', 
+		'hltvdemo.cpp',
 		'hltvserver.cpp',
 		'hltvtest.cpp',
 		'host.cpp',
@@ -308,7 +308,7 @@ def build(bld):
 			'audio/snd_wave_source.cpp',
 			'audio/snd_wave_temp.cpp',
 			'audio/snd_win.cpp',
-			'audio/voice_gain.cpp',	
+			'audio/voice_gain.cpp',
 			'audio/snd_mp3_source.cpp',
 			'audio/snd_wave_mixer_mp3.cpp',
 			'audio/VBRHeader.cpp', #[!$X360]
@@ -331,9 +331,9 @@ def build(bld):
 			'vgui_vprofpanel.cpp',
 			'toolframework.cpp',
 		]
-		
+
 		if bld.env.DEST_OS != 'win32':
-			source += [	
+			source += [
 				'audio/voice_mixer_controls_openal.cpp', #[$OSXALL||$LINUXALL]
 				'audio/voice_record_openal.cpp' #[$OSXALL||$LINUXALL]
 			]
@@ -357,7 +357,7 @@ def build(bld):
 
 	defines = []
 
-	libs = ['tier0','vgui_controls','dmxloader','tier1','tier2','tier3','bitmap','vstdlib','appframework','datamodel','vtf','mathlib','steam_api','matsys_controls','BZ2','SDL2','JPEG','ZLIB','OPENAL','CURL' ]
+	libs = ['tier0','vgui_controls','dmxloader','tier1','tier2','tier3','bitmap','vstdlib','appframework','datamodel','vtf','mathlib','steam_api','matsys_controls','BZ2','SDL3','JPEG','ZLIB','OPENAL','CURL' ]
 
 	if bld.env.DEST_OS == 'android':
 		libs += ['SSL', 'CRYPTO'] # android curl was built with openssl
@@ -365,7 +365,7 @@ def build(bld):
 		libs += ['USER32', 'WINMM', 'WININET', 'DSOUND', 'DXGUID', 'GDI32', 'bzip2']
 	elif bld.env.DEST_OS == 'darwin' and not bld.env.DEDICATED:
 		libs += ['APPKIT', 'COREAUDIO', 'AUDIOTOOLBOX', 'SYSTEMCONFIGURATION']
-		
+
 	install_path = bld.env.LIBDIR
 
 	bld.shlib(
@@ -380,4 +380,3 @@ def build(bld):
 		subsystem = bld.env.MSVC_SUBSYSTEM,
 		idx      = bld.get_taskgen_count()
 	)
-

@@ -34,7 +34,7 @@
 
 #undef PROTECTED_THINGS_ENABLE
 
-#include "SDL_opengl.h"
+#include "SDL3/SDL_opengl.h"
 #include "tier0/basetypes.h"
 #include "tier0/platform.h"
 
@@ -68,7 +68,7 @@
 		typedef HWND VD3DHWND;
 	#endif
 
-	#define	GLMPRINTF(args)	
+	#define	GLMPRINTF(args)
 	#define	GLMPRINTSTR(args)
 	#define	GLMPRINTTEXT(args)
 #endif // defined(DX_TO_GL_ABSTRACTION)

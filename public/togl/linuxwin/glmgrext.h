@@ -28,7 +28,7 @@
 //===============================================================================
 
 #pragma once
-#include "SDL_opengl.h"
+#include "SDL3/SDL_opengl.h"
 
 #ifndef GL_EXT_framebuffer_sRGB
 	#define GL_FRAMEBUFFER_SRGB_EXT                 0x8DB9
@@ -111,4 +111,3 @@
 #ifndef GL_MAP_COHERENT_BIT
 #define GL_MAP_COHERENT_BIT					0x0080
 #endif
-

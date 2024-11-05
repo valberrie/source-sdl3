@@ -9,15 +9,14 @@
 #include "tier1/convar.h"
 #include "tier0/icommandline.h"
 
-#include "SDL.h"
-#include "SDL_gamecontroller.h"
-#include "SDL_haptic.h"
+#include <SDL3/SDL.h>
+
 
 // NOTE: This has to be the last file included!
 #include "tier0/memdbgon.h"
 
-static ButtonCode_t ControllerButtonToButtonCode( SDL_GameControllerButton button );
-static AnalogCode_t ControllerAxisToAnalogCode( SDL_GameControllerAxis axis );
+static ButtonCode_t ControllerButtonToButtonCode( SDL_GamepadButton button );
+static AnalogCode_t ControllerAxisToAnalogCode( SDL_GamepadAxis axis );
 static int JoystickSDLWatcher( void *userInfo, SDL_Event *event );
 
 ConVar joy_axisbutton_threshold( "joy_axisbutton_threshold", "0.3", FCVAR_ARCHIVE, "Analog axis range before a button press is registered." );
@@ -28,6 +27,8 @@ ConVar joy_active( "joy_active", "-1", FCVAR_NONE, "Which of the connected joyst
 
 static void joy_gamecontroller_config_changed_f( IConVar *var, const char *pOldValue, float flOldValue );
 ConVar joy_gamecontroller_config( "joy_gamecontroller_config", "", FCVAR_ARCHIVE, "Game controller mapping (passed to SDL with SDL_HINT_GAMECONTROLLERCONFIG), can also be configured in Steam Big Picture mode.", &joy_gamecontroller_config_changed_f );
+
+SDL_JoystickID* pJoysticks = NULL;
 
 void SearchForDevice()
 {
@@ -45,21 +46,15 @@ void SearchForDevice()
 		return;
 	}
 
-	for ( int device_index = 0; device_index < SDL_NumJoysticks(); ++device_index )
+	int total;
+	pJoysticks = SDL_GetJoysticks(&total);
+
+	for (int i = 0; i < total; i++)
 	{
-		SDL_Joystick *joystick = SDL_JoystickOpen(device_index);
-		if ( joystick == NULL )
+	    SDL_Joystick* joystick = SDL_OpenJoystick(pJoysticks[i]);
+		if (joystick != NULL)
 		{
-			continue;
-		}
-
-		int joystickId = SDL_JoystickInstanceID(joystick);
-		SDL_JoystickClose(joystick);
-
-		if ( joystickId == newJoystickId )
-		{
-			pInputSystem->JoystickHotplugAdded(device_index);
-			break;
+		    pInputSystem->JoystickHotplugAdded(pJoysticks[i]);
 		}
 	}
 }
@@ -78,7 +73,7 @@ void joy_active_changed_f( IConVar *var, const char *pOldValue, float flOldValue
 void joy_gamecontroller_config_changed_f( IConVar *var, const char *pOldValue, float flOldValue )
 {
 	CInputSystem *pInputSystem = (CInputSystem *)g_pInputSystem;
-	if ( pInputSystem && SDL_WasInit(SDL_INIT_GAMECONTROLLER) )
+	if ( pInputSystem && SDL_WasInit(SDL_INIT_GAMEPAD) )
 	{
 		bool oldValuePresent = pOldValue && ( strlen( pOldValue ) > 0 );
 		bool newValuePresent = ( strlen( joy_gamecontroller_config.GetString() ) > 0 );
@@ -111,11 +106,11 @@ int JoystickSDLWatcher( void *userInfo, SDL_Event *event )
 
 	switch ( event->type )
 	{
-		case SDL_CONTROLLERAXISMOTION:
-		case SDL_CONTROLLERBUTTONDOWN:
-		case SDL_CONTROLLERBUTTONUP:
-		case SDL_CONTROLLERDEVICEADDED:
-		case SDL_CONTROLLERDEVICEREMOVED:
+		case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+		case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+		case SDL_EVENT_GAMEPAD_BUTTON_UP:
+		case SDL_EVENT_GAMEPAD_ADDED:
+		case SDL_EVENT_GAMEPAD_REMOVED:
 			break;
 		default:
 			return 1;
@@ -131,24 +126,24 @@ int JoystickSDLWatcher( void *userInfo, SDL_Event *event )
 
 	switch ( event->type )
 	{
-		case SDL_CONTROLLERAXISMOTION:
+		case SDL_EVENT_GAMEPAD_AXIS_MOTION:
 		{
-			pInputSystem->JoystickAxisMotion(event->caxis.which, event->caxis.axis, event->caxis.value);
+			pInputSystem->JoystickAxisMotion(event->gaxis.which, event->gaxis.axis, event->gaxis.value);
 			break;
 		}
 
-		case SDL_CONTROLLERBUTTONDOWN:
-			pInputSystem->JoystickButtonPress(event->cbutton.which, event->cbutton.button);
+		case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+			pInputSystem->JoystickButtonPress(event->gbutton.which, event->gbutton.button);
 			break;
-		case SDL_CONTROLLERBUTTONUP:
-			pInputSystem->JoystickButtonRelease(event->cbutton.which, event->cbutton.button);
+		case SDL_EVENT_GAMEPAD_BUTTON_UP:
+			pInputSystem->JoystickButtonRelease(event->gbutton.which, event->gbutton.button);
 			break;
 
-		case SDL_CONTROLLERDEVICEADDED:
-			pInputSystem->JoystickHotplugAdded(event->cdevice.which);
+		case SDL_EVENT_GAMEPAD_ADDED:
+			pInputSystem->JoystickHotplugAdded(event->gdevice.which);
 			break;
-		case SDL_CONTROLLERDEVICEREMOVED:
-			pInputSystem->JoystickHotplugRemoved(event->cdevice.which);
+		case SDL_EVENT_GAMEPAD_REMOVED:
+			pInputSystem->JoystickHotplugRemoved(event->gdevice.which);
 			SearchForDevice();
 			break;
 	}
@@ -185,9 +180,9 @@ void CInputSystem::InitializeJoysticks( void )
 		SDL_SetHint(SDL_HINT_GAMECONTROLLERCONFIG, controllerConfig);
 	}
 
-	if ( SDL_InitSubSystem( SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC ) == -1 )
+	if ( SDL_InitSubSystem( SDL_INIT_GAMEPAD | SDL_INIT_HAPTIC ) != 0)
 	{
-		Warning("Joystick init failed -- SDL_Init(SDL_INIT_GAMECONTROLLER|SDL_INIT_HAPTIC) failed: %s.\n", SDL_GetError());
+	    Warning("Joystick init failed -- SDL_Init(SDL_INIT_GAMECONTROLLER|SDL_INIT_HAPTIC) failed: %s.\n", SDL_GetError());
 		return;
 	}
 
@@ -195,13 +190,31 @@ void CInputSystem::InitializeJoysticks( void )
 
 	SDL_AddEventWatch(JoystickSDLWatcher, this);
 
+	int totalSticks;
+	SDL_JoystickID* pJoy = SDL_GetJoysticks(&totalSticks);
+
+	for (int i = 0; i < totalSticks; i++)
+	{
+	    if(SDL_IsGamepad(pJoy[i]))
+		{
+		    JoystickHotplugAdded(pJoy[i]);
+		}
+		else
+		{
+			const char* name = SDL_GetJoystickNameForID(pJoy[i]);
+			const char* path = SDL_GetJoystickPathForID(pJoy[i]);
+			Msg("Found joystick '%s' (%s), but no recognized controller configuration for it.\n", name, path);
+		}
+	}
+
+	/*
 	const int totalSticks = SDL_NumJoysticks();
 	for ( int i = 0; i < totalSticks; i++ )
 	{
 		if ( SDL_IsGameController(i) )
 		{
 			JoystickHotplugAdded(i);
-		} 
+		}
 		else
 		{
 			SDL_JoystickGUID joyGUID = SDL_JoystickGetDeviceGUID(i);
@@ -216,6 +229,7 @@ void CInputSystem::InitializeJoysticks( void )
 	{
 		Msg("Did not detect any valid joysticks.\n");
 	}
+	*/
 }
 
 void CInputSystem::ShutdownJoysticks()
@@ -230,7 +244,7 @@ void CInputSystem::ShutdownJoysticks()
 	{
 		JoystickHotplugRemoved( m_pJoystickInfo[ 0 ].m_nDeviceId );
 	}
-	SDL_QuitSubSystem( SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC );
+	SDL_QuitSubSystem( SDL_INIT_GAMEPAD | SDL_INIT_HAPTIC );
 
 	m_bJoystickInitialized = false;
 }
@@ -251,29 +265,31 @@ static void SetJoyXControllerFound( bool found )
 	}
 }
 
-void CInputSystem::JoystickHotplugAdded( int joystickIndex )
+void CInputSystem::JoystickHotplugAdded( int joystickID )
 {
+    /*
 	// SDL_IsGameController doesn't bounds check its inputs.
 	if ( joystickIndex < 0 || joystickIndex >= SDL_NumJoysticks() )
 	{
 		return;
 	}
+	*/
 
-	if ( !SDL_IsGameController(joystickIndex) )
+	if ( !SDL_IsGamepad(joystickID) )
 	{
 		Warning("Joystick is not recognized by the game controller system. You can configure the controller in Steam Big Picture mode.\n");
 		return;
 	}
 
-	SDL_Joystick *joystick = SDL_JoystickOpen(joystickIndex);
+	SDL_Joystick *joystick = SDL_OpenJoystick(joystickID);
 	if ( joystick == NULL )
 	{
-		Warning("Could not open joystick %i: %s", joystickIndex, SDL_GetError());
+		Warning("Could not open joystick %i: %s", joystickID, SDL_GetError());
 		return;
 	}
 
-	int joystickId = SDL_JoystickInstanceID(joystick);
-	SDL_JoystickClose(joystick);
+	//int joystickId = SDL_GetJoystickID(joystick);
+	SDL_CloseJoystick(joystick);
 
 	int activeJoystick = joy_active.GetInt();
 	JoystickInfo_t& info = m_pJoystickInfo[ 0 ];
@@ -282,20 +298,20 @@ void CInputSystem::JoystickHotplugAdded( int joystickIndex )
 		// Only opportunistically open devices if we don't have one open already.
 		if ( info.m_nDeviceId != -1 )
 		{
-			Msg("Detected supported joystick #%i '%s'. Currently active joystick is #%i.\n", joystickId, SDL_JoystickNameForIndex(joystickIndex), info.m_nDeviceId);
+			Msg("Detected supported joystick #%i '%s'. Currently active joystick is #%i.\n", joystickID, SDL_GetJoystickNameForID(joystickID), info.m_nDeviceId);
 			return;
 		}
 	}
-	else if ( activeJoystick != joystickId )
+	else if ( activeJoystick != joystickID )
 	{
-		Msg("Detected supported joystick #%i '%s'. Currently active joystick is #%i.\n", joystickId, SDL_JoystickNameForIndex(joystickIndex), activeJoystick);
+		Msg("Detected supported joystick #%i '%s'. Currently active joystick is #%i.\n", joystickID, SDL_GetJoystickNameForID(joystickID), activeJoystick);
 		return;
 	}
 
 	if ( info.m_nDeviceId != -1 )
 	{
 		// Don't try to open the device we already have open.
-		if ( info.m_nDeviceId == joystickId )
+		if ( info.m_nDeviceId == joystickID )
 		{
 			return;
 		}
@@ -304,28 +320,28 @@ void CInputSystem::JoystickHotplugAdded( int joystickIndex )
 		JoystickHotplugRemoved(info.m_nDeviceId);
 	}
 
-	Msg("Initializing joystick #%i and making it active.\n", joystickId);
+	Msg("Initializing joystick #%i and making it active.\n", joystickID);
 
-	SDL_GameController *controller = SDL_GameControllerOpen(joystickIndex);
-	if ( controller == NULL )
+	SDL_Gamepad *gamepad = SDL_OpenGamepad(joystickID);
+	if ( gamepad == NULL )
 	{
-		Warning("Failed to open joystick %i: %s\n", joystickId, SDL_GetError());
+		Warning("Failed to open joystick %i: %s\n", joystickID, SDL_GetError());
 		return;
 	}
 
 	// XXX: This will fail if this is a *real* hotplug event (and not coming from the initial InitializeJoysticks call).
 	// That's because the SDL haptic subsystem currently doesn't do hotplugging. Everything but haptics will work fine.
-	SDL_Haptic *haptic = SDL_HapticOpenFromJoystick(SDL_GameControllerGetJoystick(controller));
-	if ( haptic == NULL || SDL_HapticRumbleInit(haptic) != 0 )
+	SDL_Haptic *haptic = SDL_OpenHapticFromJoystick(SDL_GetGamepadJoystick(gamepad));
+	if ( haptic == NULL || SDL_InitHapticRumble(haptic) != 0 )
 	{
-		Warning("Unable to initialize rumble for joystick #%i: %s\n", joystickId, SDL_GetError());
+		Warning("Unable to initialize rumble for joystick #%i: %s\n", joystickID, SDL_GetError());
 		haptic = NULL;
 	}
 
-	info.m_pDevice = controller;
+	info.m_pDevice = gamepad;
 	info.m_pHaptic = haptic;
-	info.m_nDeviceId = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(controller));
-	info.m_nButtonCount = SDL_CONTROLLER_BUTTON_MAX;
+	info.m_nDeviceId = SDL_GetJoystickID(SDL_GetGamepadJoystick(gamepad));
+	info.m_nButtonCount = SDL_GAMEPAD_BUTTON_MAX;
 	info.m_bRumbleEnabled = false;
 
 	SetJoyXControllerFound(true);
@@ -359,8 +375,8 @@ void CInputSystem::JoystickHotplugRemoved( int joystickId )
 	EnableJoystickInput(0, false);
 	SetJoyXControllerFound(false);
 
-	SDL_HapticClose((SDL_Haptic *)info.m_pHaptic);
-	SDL_GameControllerClose((SDL_GameController *)info.m_pDevice);
+	SDL_CloseHaptic((SDL_Haptic *)info.m_pHaptic);
+	SDL_CloseGamepad((SDL_Gamepad *)info.m_pDevice);
 
 	info.m_pHaptic = NULL;
 	info.m_pDevice = NULL;
@@ -380,7 +396,7 @@ void CInputSystem::JoystickButtonPress( int joystickId, int button )
 		return;
 	}
 
-	ButtonCode_t buttonCode = ControllerButtonToButtonCode((SDL_GameControllerButton)button);
+	ButtonCode_t buttonCode = ControllerButtonToButtonCode((SDL_GamepadButton)button);
 	PostButtonPressedEvent(IE_ButtonPressed, m_nLastSampleTick, buttonCode, buttonCode);
 }
 
@@ -392,7 +408,7 @@ void CInputSystem::JoystickButtonRelease( int joystickId, int button )
 		return;
 	}
 
-	ButtonCode_t buttonCode = ControllerButtonToButtonCode((SDL_GameControllerButton)button);
+	ButtonCode_t buttonCode = ControllerButtonToButtonCode((SDL_GamepadButton)button);
 	PostButtonReleasedEvent(IE_ButtonReleased, m_nLastSampleTick, buttonCode, buttonCode);
 }
 
@@ -405,7 +421,7 @@ void CInputSystem::JoystickAxisMotion( int joystickId, int axis, int value )
 		return;
 	}
 
-	AnalogCode_t code = ControllerAxisToAnalogCode((SDL_GameControllerAxis)axis);
+	AnalogCode_t code = ControllerAxisToAnalogCode((SDL_GamepadAxis)axis);
 	if ( code == ANALOG_CODE_INVALID )
 	{
 		Warning("Invalid code for axis %i\n", axis);
@@ -415,10 +431,10 @@ void CInputSystem::JoystickAxisMotion( int joystickId, int axis, int value )
 	ButtonCode_t buttonCode = BUTTON_CODE_NONE;
 	switch ( axis )
 	{
-		case SDL_CONTROLLER_AXIS_TRIGGERRIGHT:
+		case SDL_GAMEPAD_AXIS_RIGHT_TRIGGER:
 			buttonCode = KEY_XBUTTON_RTRIGGER;
 			break;
-		case SDL_CONTROLLER_AXIS_TRIGGERLEFT:
+		case SDL_GAMEPAD_AXIS_LEFT_TRIGGER:
 			buttonCode = KEY_XBUTTON_LTRIGGER;
 			break;
 	}
@@ -529,7 +545,7 @@ void CInputSystem::SetXDeviceRumble( float fLeftMotor, float fRightMotor, int us
 	{
 		if ( info.m_bRumbleEnabled )
 		{
-			SDL_HapticRumbleStop( (SDL_Haptic *)info.m_pHaptic );
+			SDL_StopHapticRumble( (SDL_Haptic *)info.m_pHaptic );
 			info.m_bRumbleEnabled = false;
 			info.m_fCurrentRumble = 0.0f;
 		}
@@ -546,68 +562,68 @@ void CInputSystem::SetXDeviceRumble( float fLeftMotor, float fRightMotor, int us
 	info.m_bRumbleEnabled = true;
 	info.m_fCurrentRumble = strength;
 
-	if ( SDL_HapticRumblePlay((SDL_Haptic *)info.m_pHaptic, strength, SDL_HAPTIC_INFINITY) != 0 )
+	if ( SDL_PlayHapticRumble((SDL_Haptic *)info.m_pHaptic, strength, SDL_HAPTIC_INFINITY) != 0 )
 	{
 		Warning("Couldn't play rumble (strength %.1f): %s\n", strength, SDL_GetError());
 	}
 }
 
-ButtonCode_t ControllerButtonToButtonCode( SDL_GameControllerButton button )
+ButtonCode_t ControllerButtonToButtonCode( SDL_GamepadButton button )
 {
 	switch ( button )
 	{
-		case SDL_CONTROLLER_BUTTON_A: // KEY_XBUTTON_A
-		case SDL_CONTROLLER_BUTTON_B: // KEY_XBUTTON_B
-		case SDL_CONTROLLER_BUTTON_X: // KEY_XBUTTON_X
-		case SDL_CONTROLLER_BUTTON_Y: // KEY_XBUTTON_Y
+		case SDL_GAMEPAD_BUTTON_SOUTH: // KEY_XBUTTON_A
+		case SDL_GAMEPAD_BUTTON_EAST: // KEY_XBUTTON_B
+		case SDL_GAMEPAD_BUTTON_WEST: // KEY_XBUTTON_X
+		case SDL_GAMEPAD_BUTTON_NORTH: // KEY_XBUTTON_Y
 			return JOYSTICK_BUTTON(0, button);
 
-		case SDL_CONTROLLER_BUTTON_BACK:
+		case SDL_GAMEPAD_BUTTON_BACK:
 			return KEY_XBUTTON_BACK;
-		case SDL_CONTROLLER_BUTTON_START:
+		case SDL_GAMEPAD_BUTTON_START:
 			return KEY_XBUTTON_START;
 
-		case SDL_CONTROLLER_BUTTON_GUIDE:
+		case SDL_GAMEPAD_BUTTON_GUIDE:
 			return KEY_XBUTTON_BACK; // XXX: How are we supposed to handle this? Steam overlay etc.
 
-		case SDL_CONTROLLER_BUTTON_LEFTSTICK:
+		case SDL_GAMEPAD_BUTTON_LEFT_STICK:
 			return KEY_XBUTTON_STICK1;
-		case SDL_CONTROLLER_BUTTON_RIGHTSTICK:
+		case SDL_GAMEPAD_BUTTON_RIGHT_STICK:
 			return KEY_XBUTTON_STICK2;
-		case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
+		case SDL_GAMEPAD_BUTTON_LEFT_SHOULDER:
 			return KEY_XBUTTON_LEFT_SHOULDER;
-		case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER:
+		case SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER:
 			return KEY_XBUTTON_RIGHT_SHOULDER;
 
-		case SDL_CONTROLLER_BUTTON_DPAD_UP:
+		case SDL_GAMEPAD_BUTTON_DPAD_UP:
 			return KEY_XBUTTON_UP;
-		case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+		case SDL_GAMEPAD_BUTTON_DPAD_DOWN:
 			return KEY_XBUTTON_DOWN;
-		case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+		case SDL_GAMEPAD_BUTTON_DPAD_LEFT:
 			return KEY_XBUTTON_LEFT;
-		case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+		case SDL_GAMEPAD_BUTTON_DPAD_RIGHT:
 			return KEY_XBUTTON_RIGHT;
 	}
 
 	return BUTTON_CODE_NONE;
 }
 
-AnalogCode_t ControllerAxisToAnalogCode( SDL_GameControllerAxis axis )
+AnalogCode_t ControllerAxisToAnalogCode( SDL_GamepadAxis axis )
 {
 	switch ( axis )
 	{
-		case SDL_CONTROLLER_AXIS_LEFTX:
+		case SDL_GAMEPAD_AXIS_LEFTX:
 			return JOYSTICK_AXIS(0, JOY_AXIS_X);
-		case SDL_CONTROLLER_AXIS_LEFTY:
+		case SDL_GAMEPAD_AXIS_LEFTY:
 			return JOYSTICK_AXIS(0, JOY_AXIS_Y);
 
-		case SDL_CONTROLLER_AXIS_RIGHTX:
+		case SDL_GAMEPAD_AXIS_RIGHTX:
 			return JOYSTICK_AXIS(0, JOY_AXIS_U);
-		case SDL_CONTROLLER_AXIS_RIGHTY:
+		case SDL_GAMEPAD_AXIS_RIGHTY:
 			return JOYSTICK_AXIS(0, JOY_AXIS_R);
 
-		case SDL_CONTROLLER_AXIS_TRIGGERRIGHT:
-		case SDL_CONTROLLER_AXIS_TRIGGERLEFT:
+		case SDL_GAMEPAD_AXIS_RIGHT_TRIGGER:
+		case SDL_GAMEPAD_AXIS_LEFT_TRIGGER:
 			return JOYSTICK_AXIS(0, JOY_AXIS_Z);
 	}
 

@@ -1,6 +1,6 @@
 //========= Copyright Valve Corporation, All rights reserved. ============//
 //
-// Purpose: 
+// Purpose:
 //
 // $NoKeywords: $
 //=============================================================================//
@@ -30,7 +30,7 @@
 #include "sourcevr/isourcevirtualreality.h"
 
 #if defined( USE_SDL )
-#include "SDL.h"
+#include "SDL3/SDL.h"
 #endif
 
 #include "inetchannelinfo.h"
@@ -93,7 +93,7 @@ void GetNameForDXLevel( int dxlevel, char *name, int bufferSize)
 		Q_snprintf( name, bufferSize, "DirectX v%.1f", dxlevel / 10.0f );
 	}
 }
-	
+
 //-----------------------------------------------------------------------------
 // Purpose: returns the aspect ratio mode number for the given resolution
 //-----------------------------------------------------------------------------
@@ -259,7 +259,7 @@ public:
 		m_pDXLevel->DeleteAllItems();
 		for (int i = 0; i < ARRAYSIZE(g_DirectXLevels); i++)
 		{
-			// don't allow choice of lower dxlevels than the default, 
+			// don't allow choice of lower dxlevels than the default,
 			// unless we're already at that lower level or have it forced
 			if (!CommandLine()->CheckParm("-dxlevel") &&
 				g_DirectXLevels[i] != config.dxSupportLevel &&
@@ -431,10 +431,10 @@ public:
 		SetSizeable( false );
 
 		m_pDXLevel->SetEnabled(false);
-		
+
 		m_pColorCorrection->SetEnabled( mat_dxlevel.GetInt() >= 90 );
 		m_pMotionBlur->SetEnabled( mat_dxlevel.GetInt() >= 90 );
-		
+
 		if ( g_pCVar->FindVar( "fov_desired" ) == NULL )
 		{
 			Panel *pFOV = FindChildByName( "FovSlider" );
@@ -455,7 +455,7 @@ public:
 				pFOV->SetVisible( false );
 			}
 		}
-		
+
 		MarkDefaultSettingsAsRecommended();
 
 		m_bUseChanges = false;
@@ -552,7 +552,7 @@ public:
 	{
 		// Pull in data from dxsupport.cfg database (includes fine-grained per-vendor/per-device config data)
 		KeyValues *pKeyValues = new KeyValues( "config" );
-		materials->GetRecommendedConfigurationInfo( 0, pKeyValues );	
+		materials->GetRecommendedConfigurationInfo( 0, pKeyValues );
 
 		// Read individual values from keyvalues which came from dxsupport.cfg database
 		int nSkipLevels = pKeyValues->GetInt( "ConVar.mat_picmip", 0 );
@@ -575,7 +575,7 @@ public:
 		// It doesn't make sense to retrieve this convar from dxsupport, because we'll then have materialsystem setting this config at loadtime. (Also, it only has very minimal support for CPU related configuration.)
 		//int nMulticore = pKeyValues->GetInt( "ConVar.mat_queue_mode", 0 );
 		int nMulticore = GetCPUInformation()->m_nPhysicalProcessors >= 2;
-		
+
 		// Only recommend a dxlevel if there is more than one available
 		if ( m_pDXLevel->GetItemCount() > 1 )
 		{
@@ -589,7 +589,7 @@ public:
 				}
 			}
 		}
-	
+
 		SetComboItemAsRecommended( m_pModelDetail, 2 - nRootLOD );
 		SetComboItemAsRecommended( m_pTextureDetail, 2 - nSkipLevels );
 
@@ -632,7 +632,7 @@ public:
 			SetComboItemAsRecommended( m_pShadowDetail, 0 );	// Blobbies
 
 		SetComboItemAsRecommended( m_pShaderDetail, nReduceFillRate ? 0 : 1 );
-		
+
 #ifndef _X360
 		if ( nWaterUseRealtimeReflection )
 #endif
@@ -678,13 +678,13 @@ public:
 	{
 		if ( !m_bUseChanges )
 			return;
-		
+
 		KeyValues *pActiveItem = m_pDXLevel->GetActiveItemUserData();
 		if ( pActiveItem )
 		{
 			ApplyChangesToConVar( "mat_dxlevel", pActiveItem->GetInt( "dxlevel" ) );
 		}
-		
+
 		ApplyChangesToConVar( "r_rootlod", 2 - m_pModelDetail->GetActiveItem());
 		ApplyChangesToConVar( "mat_picmip", 2 - m_pTextureDetail->GetActiveItem());
 
@@ -769,17 +769,17 @@ public:
 			break;
 		}
 
-		ApplyChangesToConVar( "mat_vsync", m_pVSync->GetActiveItem() );	 
+		ApplyChangesToConVar( "mat_vsync", m_pVSync->GetActiveItem() );
 
 		int iMC = m_pMulticore->GetActiveItem();
-		ApplyChangesToConVar( "mat_queue_mode", (iMC == 0) ? 0 : -1 );	 
+		ApplyChangesToConVar( "mat_queue_mode", (iMC == 0) ? 0 : -1 );
 
 		ApplyChangesToConVar( "mat_colorcorrection", m_pColorCorrection->GetActiveItem() );
 
 		ApplyChangesToConVar( "mat_motion_blur_enabled", m_pMotionBlur->GetActiveItem() );
-		
+
 		CCvarSlider *pFOV = (CCvarSlider *)FindChildByName( "FOVSlider" );
-		if ( pFOV ) 
+		if ( pFOV )
 		{
 			pFOV->ApplyChanges();
 		}
@@ -861,7 +861,7 @@ public:
 		int nAAQuality = mat_aaquality.GetInt();
 		int nMSAAMode = FindMSAAMode( nAASamples, nAAQuality );
 		m_pAntialiasingMode->ActivateItem( nMSAAMode );
-	
+
 		m_pAntialiasingMode->SetEnabled( m_nNumAAModes > 1 );
 
 #ifndef _X360
@@ -996,9 +996,9 @@ private:
 //-----------------------------------------------------------------------------
 // Purpose: Get display index we will go fullscreen on.
 //-----------------------------------------------------------------------------
-static int getSDLDisplayIndex()
+static int getSDLDisplayID()
 {
-	static ConVarRef sdl_displayindex( "sdl_displayindex" );
+	static ConVarRef sdl_displayindex( "sdl_displayid" );
 
 	Assert( sdl_displayindex.IsValid() );
 	return sdl_displayindex.IsValid() ? sdl_displayindex.GetInt() : 0;
@@ -1007,9 +1007,9 @@ static int getSDLDisplayIndex()
 //-----------------------------------------------------------------------------
 // Purpose: Get display index we are currently fullscreen on. (or -1 if none).
 //-----------------------------------------------------------------------------
-static int getSDLDisplayIndexFullscreen()
+static int getSDLDisplayIDFullscreen()
 {
-	static ConVarRef sdl_displayindex_fullscreen( "sdl_displayindex_fullscreen" );
+	static ConVarRef sdl_displayindex_fullscreen( "sdl_displayid_fullscreen" );
 
 	Assert( sdl_displayindex_fullscreen.IsValid() );
 	return sdl_displayindex_fullscreen.IsValid() ? sdl_displayindex_fullscreen.GetInt() : -1;
@@ -1085,11 +1085,12 @@ COptionsSubVideo::COptionsSubVideo(vgui::Panel *parent) : PropertyPage(parent, N
 	m_pVRMode->AddItem( pszVRModeName[0], NULL );
 	m_pVRMode->AddItem( pszVRModeName[1], NULL );
 
-	// Multimonitor under Direct3D requires you to destroy and recreate the device, 
-	// which is an operation we don't support as it currently stands. The user can 
+	// Multimonitor under Direct3D requires you to destroy and recreate the device,
+	// which is an operation we don't support as it currently stands. The user can
 	// pass -adapter N to use a different device.
 #if defined( USE_SDL ) && defined( DX_TO_GL_ABSTRACTION )
-	int numVideoDisplays = SDL_GetNumVideoDisplays();
+    int numVideoDisplays = 0;
+    SDL_GetDisplays(&numVideoDisplays);
 
 	m_pWindowed = new vgui::ComboBox( this, "DisplayModeCombo", 5 + numVideoDisplays, false );
 
@@ -1144,12 +1145,12 @@ COptionsSubVideo::COptionsSubVideo(vgui::Panel *parent) : PropertyPage(parent, N
 	{
 		m_pHDContent->SetVisible( true );
 	}
-	
+
 	// if VR mode isn't available, disable the dropdown
 	if( !g_pSourceVR )
 	{
 		// if sourcevr.dll is missing entirely that means VR mode is not
-		// supported in this game. Hide the mode dropdown and its label 
+		// supported in this game. Hide the mode dropdown and its label
 		m_pVRMode->SetVisible( false );
 
 		Panel *label = FindChildByName( "VRModeLabel" );
@@ -1195,7 +1196,10 @@ void COptionsSubVideo::PrepareResolutionList()
 	gameuifuncs->GetDesktopResolution( desktopWidth, desktopHeight );
 
 #if defined( USE_SDL )
-	bool bFullScreenWithMultipleDisplays = ( !bWindowed && ( SDL_GetNumVideoDisplays() > 1 ) );
+    int numDisplays = 0;
+    SDL_GetDisplays(&numDisplays);
+
+	bool bFullScreenWithMultipleDisplays = ( !bWindowed && ( numDisplays > 1 ) );
 	if ( bFullScreenWithMultipleDisplays )
 	{
 		SDL_Rect rect;
@@ -1216,7 +1220,7 @@ void COptionsSubVideo::PrepareResolutionList()
 	//	fake things out so the native fullscreen resolution is selected. Stuck this in
 	//	because I assume most people will go fullscreen at native resolution, and it's sometimes
 	//	difficult to find the native resolution with all the aspect ratio options.
-	bool bNewFullscreenDisplay = ( !bWindowed && ( getSDLDisplayIndexFullscreen() != m_pWindowed->GetActiveItem() ) );
+	bool bNewFullscreenDisplay = ( !bWindowed && ( getSDLDisplayIDFullscreen() != m_pWindowed->GetActiveItem() ) );
 	if ( bNewFullscreenDisplay )
 	{
 		currentWidth = desktopWidth;
@@ -1309,7 +1313,7 @@ void COptionsSubVideo::PrepareResolutionList()
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 COptionsSubVideo::~COptionsSubVideo()
 {
@@ -1332,7 +1336,7 @@ FILE *FOpenGameHDFile( const char *pchMode )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 bool COptionsSubVideo::BUseHDContent()
 {
@@ -1372,7 +1376,7 @@ void COptionsSubVideo::SetUseHDContent( bool bUse )
 
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 void COptionsSubVideo::OnResetData()
 {
@@ -1392,7 +1396,7 @@ void COptionsSubVideo::OnResetData()
 	else
 	{
 		// Check which fullscreen displayindex is currently selected, and pick it.
-		ItemIndex = getSDLDisplayIndex();
+		ItemIndex = getSDLDisplayID();
 
 		if ( ( ItemIndex < 0 ) || ItemIndex >= ( m_pWindowed->GetItemCount() - 1 ) )
 		{
@@ -1424,7 +1428,7 @@ void COptionsSubVideo::OnResetData()
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 void COptionsSubVideo::SetCurrentResolutionComboItem()
 {
@@ -1437,7 +1441,7 @@ void COptionsSubVideo::SetCurrentResolutionComboItem()
     int resolution = -1;
     for ( int i = 0; i < count; i++, plist++ )
 	{
-		if ( plist->width == config.m_VideoMode.m_Width && 
+		if ( plist->width == config.m_VideoMode.m_Width &&
 			 plist->height == config.m_VideoMode.m_Height )
 		{
             resolution = i;
@@ -1455,7 +1459,7 @@ void COptionsSubVideo::SetCurrentResolutionComboItem()
 #if defined( USE_SDL )
 		SDL_Rect rect;
 #if defined( DX_TO_GL_ABSTRACTION )
-		int displayIndex = getSDLDisplayIndex();
+		int displayIndex = getSDLDisplayID();
 #else
 		int displayIndex = materials->GetCurrentAdapter();
 #endif
@@ -1526,7 +1530,7 @@ void COptionsSubVideo::OnApplyChanges()
 	bool bVRMode = m_pVRMode->GetActiveItem() != 0;
 	if( ( -1 != config.m_nVRModeAdapter ) != bVRMode )
 	{
-		// let engine fill in mat_vrmode_adapter 
+		// let engine fill in mat_vrmode_adapter
 		char szCmd[256];
 		Q_snprintf( szCmd, sizeof(szCmd), "mat_enable_vrmode %d\n", bVRMode ? 1 : 0 );
 		engine->ClientCmd_Unrestricted( szCmd );
@@ -1549,7 +1553,7 @@ void COptionsSubVideo::OnApplyChanges()
 	{
 		SDL_Rect rect;
 		int displayIndexTarget = m_pWindowed->GetActiveItem();
-		int displayIndexCurrent = getSDLDisplayIndexFullscreen();
+		int displayIndexCurrent = getSDLDisplayIDFullscreen();
 
 		// Handle going fullscreen from display X to display Y.
 		if ( displayIndexCurrent != displayIndexTarget )
@@ -1603,7 +1607,7 @@ void COptionsSubVideo::OnApplyChanges()
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose:
 //-----------------------------------------------------------------------------
 void COptionsSubVideo::PerformLayout()
 {
@@ -1709,7 +1713,7 @@ void COptionsSubVideo::OnDataChanged()
 //-----------------------------------------------------------------------------
 bool COptionsSubVideo::RequiresRestart()
 {
-	if ( m_hOptionsSubVideoAdvancedDlg.Get() 
+	if ( m_hOptionsSubVideoAdvancedDlg.Get()
 		&& m_hOptionsSubVideoAdvancedDlg->RequiresRestart() )
 	{
 		return true;
